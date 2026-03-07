@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "runebolt": "./dist/cli/index.js"
+    "runebolt": "dist/cli/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -27,28 +27,28 @@
     "ordinals",
     "bitmap"
   ],
-  "author": "Block Genomics (blockgenomics.io) <gary-moto>",
+  "author": "Block Genomics <gary-moto> (blockgenomics.io)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/gary-moto/runebolt"
+    "url": "git+https://github.com/gary-moto/runebolt.git"
   },
   "dependencies": {
-    "@grpc/grpc-js": "^1.9.0",
-    "@grpc/proto-loader": "^0.7.10",
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.7.15",
     "argon2": "^0.31.0",
-    "bitcoinjs-lib": "^6.1.5",
     "bip32": "^4.0.0",
     "bip39": "^3.1.0",
+    "bitcoinjs-lib": "^6.1.5",
     "bolt11": "^1.4.1",
     "commander": "^11.1.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
     "ecpair": "^2.1.0",
-    "express": "^4.18.2",
+    "express": "^4.22.1",
     "pino": "^8.17.0",
     "tiny-secp256k1": "^2.2.3",
-    "uuid": "^9.0.0",
+    "uuid": "^9.0.1",
     "ws": "^8.16.0",
     "zod": "^3.22.0"
   },
@@ -66,5 +66,14 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/gary-moto/runebolt/issues"
+  },
+  "homepage": "https://github.com/gary-moto/runebolt#readme"
 }
