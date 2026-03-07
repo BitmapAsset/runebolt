@@ -10,17 +10,17 @@ export class RuneBoltError extends Error {
   }
 }
 
-export class SwapError extends RuneBoltError {
+export class WalletError extends RuneBoltError {
   constructor(message: string, details?: Record<string, unknown>) {
-    super(message, 'SWAP_ERROR', 400, details);
-    this.name = 'SwapError';
+    super(message, 'WALLET_ERROR', 400, details);
+    this.name = 'WalletError';
   }
 }
 
-export class HTLCError extends RuneBoltError {
+export class WrapError extends RuneBoltError {
   constructor(message: string, details?: Record<string, unknown>) {
-    super(message, 'HTLC_ERROR', 500, details);
-    this.name = 'HTLCError';
+    super(message, 'WRAP_ERROR', 400, details);
+    this.name = 'WrapError';
   }
 }
 
@@ -31,10 +31,10 @@ export class LightningError extends RuneBoltError {
   }
 }
 
-export class IndexerError extends RuneBoltError {
+export class TaprootAssetError extends RuneBoltError {
   constructor(message: string, details?: Record<string, unknown>) {
-    super(message, 'INDEXER_ERROR', 502, details);
-    this.name = 'IndexerError';
+    super(message, 'TAPROOT_ASSET_ERROR', 500, details);
+    this.name = 'TaprootAssetError';
   }
 }
 
@@ -42,5 +42,12 @@ export class InsufficientFundsError extends RuneBoltError {
   constructor(message: string, details?: Record<string, unknown>) {
     super(message, 'INSUFFICIENT_FUNDS', 400, details);
     this.name = 'InsufficientFundsError';
+  }
+}
+
+export class SecurityError extends RuneBoltError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(message, 'SECURITY_ERROR', 403, details);
+    this.name = 'SecurityError';
   }
 }

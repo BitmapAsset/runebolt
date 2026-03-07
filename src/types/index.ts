@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+// ── Network ──
+
+export type BitcoinNetwork = 'mainnet' | 'testnet' | 'regtest';
+
 // ── Runes Types ──
 
 export interface RuneId {
@@ -18,7 +22,7 @@ export interface RuneBalance {
 export interface UtxoRef {
   txid: string;
   vout: number;
-  value: number; // satoshi value
+  value: number;
 }
 
 export interface RuneTransfer {
@@ -28,116 +32,207 @@ export interface RuneTransfer {
   to: string;
 }
 
-// ── Swap Types ──
+// ── UTXO Types ──
 
-export enum SwapDirection {
-  DEPOSIT = 'deposit',   // Runes on-chain -> Lightning payment received
-  WITHDRAW = 'withdraw', // Lightning payment sent -> Runes on-chain received
+export interface Utxo extends UtxoRef {
+  scriptPubKey: string;
+  confirmations: number;
+  runeBalance?: RuneBalance;
 }
 
-export enum SwapState {
-  CREATED = 'created',
-  HTLC_LOCKED = 'htlc_locked',
-  INVOICE_PAID = 'invoice_paid',
-  RUNES_SENT = 'runes_sent',
+// ── Taproot Asset Types ──
+
+export interface TaprootAsset {
+  assetId: string;
+  name: string;
+  amount: bigint;
+  scriptKey: Buffer;
+  groupKey?: Buffer;
+  anchorTxid: string;
+  anchorVout: number;
+  proofData: Buffer;
+}
+
+export interface AssetProof {
+  assetId: string;
+  proofFile: Buffer;
+  anchorTx: string;
+  merkleRoot: Buffer;
+  verified: boolean;
+}
+
+export interface WrapRequest {
+  runeId: RuneId;
+  runeName: string;
+  amount: bigint;
+  sourceUtxo: UtxoRef;
+  destinationPubkey: Buffer;
+}
+
+export interface UnwrapRequest {
+  assetId: string;
+  amount: bigint;
+  destinationAddress: string;
+  proof: AssetProof;
+}
+
+export enum WrapState {
+  PENDING = 'pending',
+  RUNE_LOCKED = 'rune_locked',
+  ASSET_MINTED = 'asset_minted',
   COMPLETED = 'completed',
-  REFUNDED = 'refunded',
-  EXPIRED = 'expired',
   FAILED = 'failed',
 }
 
-export interface Swap {
+export interface WrapOperation {
   id: string;
-  direction: SwapDirection;
-  state: SwapState;
+  state: WrapState;
   runeId: RuneId;
   runeName: string;
   runeAmount: bigint;
-  satoshiAmount: number;
-  lightningInvoice: string;
-  paymentHash: string;
-  preimage: string | null;
-  htlcTxid: string | null;
-  claimTxid: string | null;
-  refundTxid: string | null;
-  onchainAddress: string;
-  expiresAt: Date;
+  assetId: string | null;
+  lockTxid: string | null;
+  mintTxid: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// ── HTLC Types ──
+// ── Lightning Channel Types ──
 
-export interface HTLCParams {
-  paymentHash: Buffer;
-  claimerPubkey: Buffer;
-  refunderPubkey: Buffer;
-  timelock: number; // block height
-  runeId: RuneId;
-  runeAmount: bigint;
+export interface AssetChannel {
+  channelId: string;
+  peerPubkey: string;
+  assetId: string;
+  localBalance: bigint;
+  remoteBalance: bigint;
+  capacity: bigint;
+  active: boolean;
 }
 
-export interface HTLCState {
-  txid: string;
-  vout: number;
-  params: HTLCParams;
-  locked: boolean;
-  claimed: boolean;
-  refunded: boolean;
-}
-
-// ── Lightning Types ──
-
-export interface LightningInvoice {
+export interface AssetInvoice {
   paymentRequest: string;
   paymentHash: string;
-  valueSat: number;
+  assetId: string;
+  assetAmount: bigint;
   expiry: number;
   createdAt: Date;
 }
 
-export interface LightningPayment {
+export interface AssetPayment {
   paymentHash: string;
   preimage: string;
-  valueSat: number;
+  assetId: string;
+  assetAmount: bigint;
   feeSat: number;
   status: 'succeeded' | 'failed' | 'in_flight';
 }
 
-export interface ChannelBalance {
-  localBalance: number;
-  remoteBalance: number;
-  capacity: number;
+export interface LightningPeer {
+  pubkey: string;
+  address: string;
+  alias: string;
+  supportsTaprootAssets: boolean;
+  assetChannels: string[];
+}
+
+export interface RouteHop {
+  pubkey: string;
+  channelId: string;
+  assetId: string;
+  fee: bigint;
+}
+
+export interface PaymentRoute {
+  hops: RouteHop[];
+  totalFee: bigint;
+  estimatedTime: number;
+}
+
+// ── Wallet Types ──
+
+export interface WalletInfo {
+  fingerprint: string;
+  createdAt: Date;
+  network: BitcoinNetwork;
+  addresses: WalletAddress[];
+}
+
+export interface WalletAddress {
+  path: string;
+  address: string;
+  type: 'p2tr' | 'p2wpkh';
+  index: number;
+}
+
+export interface EncryptedWallet {
+  version: number;
+  salt: Buffer;
+  iv: Buffer;
+  ciphertext: Buffer;
+  tag: Buffer;
+  argon2Params: {
+    timeCost: number;
+    memoryCost: number;
+    parallelism: number;
+  };
+}
+
+// ── Bitmap / Inscription Types ──
+
+export interface InscriptionInfo {
+  inscriptionId: string;
+  contentType: string;
+  contentLength: number;
+  genesisHeight: number;
+  genesisFee: number;
+  address: string;
+  utxo: UtxoRef;
+  isBitmap: boolean;
+  bitmapNumber?: number;
+}
+
+// ── Audit Log Types ──
+
+export interface AuditEntry {
+  id: string;
+  timestamp: Date;
+  action: string;
+  details: Record<string, unknown>;
+  previousHash: string;
+  hash: string;
 }
 
 // ── Config Types ──
 
-export interface BridgeConfig {
-  network: 'mainnet' | 'testnet' | 'regtest';
-  mode: 'custodial' | 'non-custodial';
+export interface RuneBoltConfig {
+  network: BitcoinNetwork;
   bitcoin: {
     rpcUrl: string;
     rpcUser: string;
     rpcPass: string;
   };
-  lightning: {
-    lndHost: string;
-    lndPort: number;
+  lnd: {
+    host: string;
+    port: number;
+    tlsCertPath: string;
+    macaroonPath: string;
+  };
+  tapd: {
+    host: string;
+    port: number;
     tlsCertPath: string;
     macaroonPath: string;
   };
   indexer: {
     ordApiUrl: string;
-    unisatApiUrl: string;
-    unisatApiKey: string;
   };
-  bridge: {
-    htlcTimeoutBlocks: number;
-    minSwapAmount: bigint;
-    maxSwapAmount: bigint;
-    feeRateBps: number; // basis points (100 = 1%)
-    bridgeAddress: string;
-    bridgePrivkeyPath: string;
+  wallet: {
+    dataDir: string;
+    walletFile: string;
+    auditLogFile: string;
+    unlockTimeoutMs: number;
+    maxUnlockAttempts: number;
+    lockoutDurationMs: number;
   };
   server: {
     port: number;
@@ -148,47 +243,55 @@ export interface BridgeConfig {
 
 // ── API Schema Validation ──
 
-export const DepositRequestSchema = z.object({
-  runeName: z.string().min(1).max(100).regex(/^[a-zA-Z0-9_.]+$/, 'Invalid rune name'),
+export const WrapRequestSchema = z.object({
+  runeName: z.string().min(1).max(100).regex(/^[A-Z0-9.]+$/, 'Invalid rune name'),
   runeAmount: z.string().regex(/^\d+$/, 'Must be a positive integer').max(30),
-  lightningInvoice: z.string().startsWith('ln').max(1500),
-  refundAddress: z.string().min(1).max(200),
 });
 
-export const WithdrawRequestSchema = z.object({
-  runeName: z.string().min(1).max(100).regex(/^[a-zA-Z0-9_.]+$/, 'Invalid rune name'),
-  runeAmount: z.string().regex(/^\d+$/, 'Must be a positive integer').max(30),
+export const UnwrapRequestSchema = z.object({
+  assetId: z.string().regex(/^[a-f0-9]{64}$/, 'Invalid asset ID'),
+  amount: z.string().regex(/^\d+$/, 'Must be a positive integer').max(30),
   destinationAddress: z.string().min(1).max(200),
 });
 
-export type DepositRequest = z.infer<typeof DepositRequestSchema>;
-export type WithdrawRequest = z.infer<typeof WithdrawRequestSchema>;
+export const SendAssetSchema = z.object({
+  assetId: z.string().regex(/^[a-f0-9]{64}$/, 'Invalid asset ID'),
+  amount: z.string().regex(/^\d+$/, 'Must be a positive integer').max(30),
+  invoice: z.string().startsWith('ln').max(1500),
+});
+
+export const OpenChannelSchema = z.object({
+  peerPubkey: z.string().regex(/^[a-f0-9]{66}$/, 'Invalid pubkey'),
+  assetId: z.string().regex(/^[a-f0-9]{64}$/, 'Invalid asset ID'),
+  localAmount: z.string().regex(/^\d+$/).max(30),
+});
 
 // ── Event Types ──
 
-export enum SwapEvent {
-  CREATED = 'swap:created',
-  HTLC_LOCKED = 'swap:htlc_locked',
-  INVOICE_PAID = 'swap:invoice_paid',
-  RUNES_SENT = 'swap:runes_sent',
-  COMPLETED = 'swap:completed',
-  REFUNDED = 'swap:refunded',
-  EXPIRED = 'swap:expired',
-  FAILED = 'swap:failed',
+export enum WalletEvent {
+  WRAP_STARTED = 'wrap:started',
+  WRAP_RUNE_LOCKED = 'wrap:rune_locked',
+  WRAP_ASSET_MINTED = 'wrap:asset_minted',
+  WRAP_COMPLETED = 'wrap:completed',
+  UNWRAP_STARTED = 'unwrap:started',
+  UNWRAP_COMPLETED = 'unwrap:completed',
+  CHANNEL_OPENED = 'channel:opened',
+  CHANNEL_CLOSED = 'channel:closed',
+  PAYMENT_SENT = 'payment:sent',
+  PAYMENT_RECEIVED = 'payment:received',
+  BALANCE_UPDATED = 'balance:updated',
 }
 
-export interface SwapUpdate {
-  swapId: string;
-  event: SwapEvent;
-  state: SwapState;
-  data?: Record<string, unknown>;
+export interface WalletUpdate {
+  event: WalletEvent;
+  data: Record<string, unknown>;
   timestamp: Date;
 }
 
 // ── Fee Estimation ──
 
 export interface FeeEstimate {
-  fastestFee: number;  // sat/vB
+  fastestFee: number;
   halfHourFee: number;
   hourFee: number;
   minimumFee: number;

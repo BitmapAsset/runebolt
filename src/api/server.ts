@@ -1,9 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
-import { RunesBridge } from '../core/RunesBridge';
+import { RuneBolt } from '../core/RuneBolt';
 import { createRouter, errorHandler } from './routes';
-import { createBitmapRouter } from './bitmap-routes';
 import { setupWebSocket } from './websocket';
 import { loadConfig } from '../utils/config';
 import { createLogger } from '../utils/logger';
@@ -12,7 +11,7 @@ const log = createLogger('Server');
 
 async function main(): Promise<void> {
   const config = loadConfig();
-  const bridge = new RunesBridge(config);
+  const bolt = new RuneBolt(config);
 
   const app = express();
 
@@ -20,23 +19,25 @@ async function main(): Promise<void> {
   app.use(express.json({ limit: '100kb' }));
   app.disable('x-powered-by');
 
-  // Mount API routes
-  app.use('/api/v1', createRouter(bridge));
-  app.use('/api/v1', createBitmapRouter(bridge.bitmapMarketplace));
+  // Security headers
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+  });
 
-  // Error handler
+  app.use('/api/v1', createRouter(bolt));
   app.use(errorHandler);
 
   const server = http.createServer(app);
+  setupWebSocket(server, bolt);
 
-  // Setup WebSocket
-  setupWebSocket(server, bridge);
-
-  // Start the bridge
+  // Connect to daemons
   try {
-    await bridge.start();
+    await bolt.connect();
   } catch (err) {
-    log.warn({ err }, 'Bridge start encountered issues (LND may not be available)');
+    log.warn({ err }, 'Daemon connection issues (LND/tapd may not be available)');
   }
 
   server.listen(config.server.port, config.server.host, () => {
@@ -46,12 +47,13 @@ async function main(): Promise<void> {
     );
     log.info(`REST API: http://${config.server.host}:${config.server.port}/api/v1`);
     log.info(`WebSocket: ws://${config.server.host}:${config.server.port}/ws`);
+    log.info('No telemetry. No tracking. Self-sovereign.');
   });
 
-  // Graceful shutdown
   const shutdown = async () => {
     log.info('Shutting down...');
-    await bridge.stop();
+    bolt.lock();
+    await bolt.disconnect();
     server.close();
     process.exit(0);
   };

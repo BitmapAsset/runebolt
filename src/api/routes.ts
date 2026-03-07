@@ -1,181 +1,224 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { RunesBridge } from '../core/RunesBridge';
-import { DepositRequestSchema, WithdrawRequestSchema } from '../types';
+import { RuneBolt } from '../core/RuneBolt';
 import { RuneBoltError } from '../utils/errors';
-import { createLogger } from '../utils/logger';
+import { WrapRequestSchema, UnwrapRequestSchema, SendAssetSchema, OpenChannelSchema } from '../types';
+import { InputValidator } from '../security';
 
-const log = createLogger('API');
-
-export function createRouter(bridge: RunesBridge): Router {
+export function createRouter(bolt: RuneBolt): Router {
   const router = Router();
 
-  // POST /swap/deposit - Deposit Runes, get Lightning payment
-  router.post('/swap/deposit', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const parsed = DepositRequestSchema.parse(req.body);
-      const swap = await bridge.deposit(
-        parsed.runeName,
-        BigInt(parsed.runeAmount),
-        parsed.lightningInvoice,
-        parsed.refundAddress,
-      );
-
-      res.status(201).json({
-        id: swap.id,
-        state: swap.state,
-        runeName: swap.runeName,
-        runeAmount: swap.runeAmount.toString(),
-        paymentHash: swap.paymentHash,
-        expiresAt: swap.expiresAt.toISOString(),
-        createdAt: swap.createdAt.toISOString(),
-      });
-    } catch (err) {
-      next(err);
-    }
+  // Health check
+  router.get('/health', (_req, res) => {
+    res.json({
+      status: 'ok',
+      walletLocked: !bolt.keyManager.isUnlocked(),
+      version: '1.0.0',
+    });
   });
 
-  // POST /swap/deposit/:id/confirm - Confirm deposit with HTLC txid
-  router.post('/swap/deposit/:id/confirm', async (req: Request, res: Response, next: NextFunction) => {
+  // Wallet info
+  router.get('/wallet', (_req, res, next) => {
     try {
-      const { htlcTxid } = req.body;
-      if (!htlcTxid || typeof htlcTxid !== 'string' || !/^[a-f0-9]{64}$/.test(htlcTxid)) {
-        res.status(400).json({ error: 'htlcTxid must be a valid 64-character hex txid' });
+      const info = bolt.getWalletInfo();
+      res.json(info);
+    } catch (err) { next(err); }
+  });
+
+  // Unlock wallet
+  router.post('/wallet/unlock', async (req, res, next) => {
+    try {
+      const { password } = req.body;
+      if (!password || typeof password !== 'string') {
+        res.status(400).json({ error: 'Password required' });
         return;
       }
-
-      const swap = await bridge.confirmDeposit(req.params.id, htlcTxid);
-      res.json(serializeSwap(swap));
-    } catch (err) {
-      next(err);
-    }
+      const info = await bolt.unlock(password);
+      res.json(info);
+    } catch (err) { next(err); }
   });
 
-  // POST /swap/withdraw - Pay Lightning invoice, receive Runes
-  router.post('/swap/withdraw', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const parsed = WithdrawRequestSchema.parse(req.body);
-      const swap = await bridge.withdraw(
-        parsed.runeName,
-        BigInt(parsed.runeAmount),
-        parsed.destinationAddress,
-      );
-
-      res.status(201).json({
-        id: swap.id,
-        state: swap.state,
-        runeName: swap.runeName,
-        runeAmount: swap.runeAmount.toString(),
-        lightningInvoice: swap.lightningInvoice,
-        satoshiAmount: swap.satoshiAmount,
-        expiresAt: swap.expiresAt.toISOString(),
-        createdAt: swap.createdAt.toISOString(),
-      });
-    } catch (err) {
-      next(err);
-    }
+  // Lock wallet
+  router.post('/wallet/lock', (_req, res) => {
+    bolt.lock();
+    res.json({ status: 'locked' });
   });
 
-  // GET /swap/:id - Swap status
-  router.get('/swap/:id', async (req: Request, res: Response, next: NextFunction) => {
+  // Get balances
+  router.get('/balances', async (_req, res, next) => {
     try {
-      const swap = bridge.getSwap(req.params.id);
-      res.json(serializeSwap(swap));
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // GET /runes/:address - Runes balance check
-  router.get('/runes/:address', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const address = req.params.address;
-      if (!address || address.length > 200 || !/^[a-zA-Z0-9_.\-:]+$/.test(address)) {
-        res.status(400).json({ error: 'Invalid address format' });
-        return;
-      }
-      const balances = await bridge.indexer.getRuneBalances(address);
+      const balances = await bolt.getBalances();
       res.json({
-        address,
-        balances: balances.map((b) => ({
-          runeId: `${b.runeId.block}:${b.runeId.tx}`,
-          runeName: b.runeName,
-          amount: b.amount.toString(),
+        btcSats: balances.btcSats,
+        runes: Object.fromEntries(
+          Array.from(balances.runes.entries()).map(([name, info]) => [
+            name,
+            { runeId: info.runeId, total: info.total.toString() },
+          ]),
+        ),
+        taprootAssets: balances.taprootAssets.map(a => ({
+          assetId: a.assetId,
+          name: a.name,
+          amount: a.amount.toString(),
         })),
+        channels: balances.channels,
       });
-    } catch (err) {
-      next(err);
-    }
+    } catch (err) { next(err); }
   });
 
-  // GET /health - Health check
-  router.get('/health', async (_req: Request, res: Response) => {
+  // Wrap runes
+  router.post('/wrap', async (req, res, next) => {
     try {
-      const info = await bridge.lightning.getInfo();
-      res.json({
-        status: 'ok',
-        lightning: {
-          alias: info.alias,
-          blockHeight: info.blockHeight,
-          syncedToChain: info.syncedToChain,
+      const validation = InputValidator.validateSchema(WrapRequestSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({ error: validation.error });
+        return;
+      }
+      const result = await bolt.wrap({
+        runeId: { block: 0, tx: 0 },
+        runeName: validation.data.runeName,
+        amount: BigInt(validation.data.runeAmount),
+        sourceUtxo: { txid: '', vout: 0, value: 546 },
+        destinationPubkey: bolt.keyManager.getTaprootPubkey("m/86'/1'/0'/0/0"),
+      });
+      res.json(result);
+    } catch (err) { next(err); }
+  });
+
+  // Unwrap taproot assets
+  router.post('/unwrap', async (req, res, next) => {
+    try {
+      const validation = InputValidator.validateSchema(UnwrapRequestSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({ error: validation.error });
+        return;
+      }
+      const result = await bolt.unwrap({
+        assetId: validation.data.assetId,
+        amount: BigInt(validation.data.amount),
+        destinationAddress: validation.data.destinationAddress,
+        proof: {
+          assetId: validation.data.assetId,
+          proofFile: Buffer.alloc(0),
+          anchorTx: '',
+          merkleRoot: Buffer.alloc(0),
+          verified: false,
         },
       });
-    } catch {
-      res.status(503).json({ status: 'degraded', lightning: 'disconnected' });
-    }
+      res.json(result);
+    } catch (err) { next(err); }
+  });
+
+  // Send asset payment
+  router.post('/send', async (req, res, next) => {
+    try {
+      const validation = InputValidator.validateSchema(SendAssetSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({ error: validation.error });
+        return;
+      }
+      const payment = await bolt.sendAssetPayment(
+        validation.data.assetId,
+        validation.data.invoice,
+      );
+      res.json({
+        paymentHash: payment.paymentHash,
+        status: payment.status,
+        feeSat: payment.feeSat,
+      });
+    } catch (err) { next(err); }
+  });
+
+  // Create invoice
+  router.post('/receive', async (req, res, next) => {
+    try {
+      const { assetId, amount, memo } = req.body;
+      if (!assetId || !amount) {
+        res.status(400).json({ error: 'assetId and amount required' });
+        return;
+      }
+      const invoice = await bolt.createInvoice(assetId, BigInt(amount), memo || '');
+      res.json({
+        paymentRequest: invoice.paymentRequest,
+        paymentHash: invoice.paymentHash,
+        assetId: invoice.assetId,
+        assetAmount: invoice.assetAmount.toString(),
+        expiry: invoice.expiry,
+      });
+    } catch (err) { next(err); }
+  });
+
+  // Channels
+  router.get('/channels', (_req, res) => {
+    const channels = bolt.assetChannels.listChannels();
+    res.json({ channels });
+  });
+
+  router.post('/channels/open', async (req, res, next) => {
+    try {
+      const validation = InputValidator.validateSchema(OpenChannelSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({ error: validation.error });
+        return;
+      }
+      const channel = await bolt.openChannel(
+        validation.data.peerPubkey,
+        validation.data.assetId,
+        BigInt(validation.data.localAmount),
+      );
+      res.json(channel);
+    } catch (err) { next(err); }
+  });
+
+  router.post('/channels/close', async (req, res, next) => {
+    try {
+      const { channelId } = req.body;
+      if (!channelId) {
+        res.status(400).json({ error: 'channelId required' });
+        return;
+      }
+      await bolt.closeChannel(channelId);
+      res.json({ status: 'closed', channelId });
+    } catch (err) { next(err); }
+  });
+
+  // Peers
+  router.get('/peers', async (_req, res) => {
+    const peers = bolt.peerDiscovery.listPeers();
+    res.json({ peers });
+  });
+
+  router.post('/peers/discover', async (_req, res, next) => {
+    try {
+      const peers = await bolt.peerDiscovery.discoverPeers();
+      res.json({ peers });
+    } catch (err) { next(err); }
+  });
+
+  // Bitmaps
+  router.get('/bitmaps', async (_req, res, next) => {
+    try {
+      const bitmaps = await bolt.scanBitmaps();
+      res.json({ bitmaps });
+    } catch (err) { next(err); }
+  });
+
+  // Audit log verification
+  router.get('/audit/verify', (_req, res) => {
+    const result = bolt.auditLog.verify();
+    res.json(result);
   });
 
   return router;
 }
 
-function serializeSwap(swap: any) {
-  return {
-    id: swap.id,
-    direction: swap.direction,
-    state: swap.state,
-    runeName: swap.runeName,
-    runeAmount: swap.runeAmount.toString(),
-    satoshiAmount: swap.satoshiAmount,
-    lightningInvoice: swap.lightningInvoice,
-    paymentHash: swap.paymentHash,
-    // Only expose preimage once the swap is fully completed
-    preimage: swap.state === 'completed' ? swap.preimage : null,
-    htlcTxid: swap.htlcTxid,
-    claimTxid: swap.claimTxid,
-    refundTxid: swap.refundTxid,
-    onchainAddress: swap.onchainAddress,
-    expiresAt: swap.expiresAt?.toISOString(),
-    createdAt: swap.createdAt?.toISOString(),
-    updatedAt: swap.updatedAt?.toISOString(),
-  };
-}
-
-// Error handling middleware
 export function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction): void {
-  // Log full error internally but don't expose stack traces to clients
-  log.error({ err: { message: err.message, code: (err as any).code, name: err.name } }, 'API error');
-
   if (err instanceof RuneBoltError) {
     res.status(err.statusCode).json({
-      error: err.code,
-      message: err.message,
-      // Only include details for client errors, not server errors
-      ...(err.statusCode < 500 && err.details ? { details: err.details } : {}),
+      error: err.message,
+      code: err.code,
+      details: err.details,
     });
-    return;
+  } else {
+    res.status(500).json({ error: 'Internal server error' });
   }
-
-  if (err.name === 'ZodError') {
-    res.status(400).json({
-      error: 'VALIDATION_ERROR',
-      message: 'Invalid request',
-      details: (err as any).errors,
-    });
-    return;
-  }
-
-  // Never expose internal error details
-  res.status(500).json({
-    error: 'INTERNAL_ERROR',
-    message: 'An unexpected error occurred',
-  });
 }
