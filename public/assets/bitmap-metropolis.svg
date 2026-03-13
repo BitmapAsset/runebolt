@@ -1,0 +1,88 @@
+<!-- RuneBolt Visual Assets - The Big Four -->
+<!-- Bitmap Metropolis (Left Side) -->
+<svg id="bitmap-metropolis" viewBox="0 0 400 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Bitcoin Orange Gradient -->
+    <linearGradient id="btcOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F7931A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFD700;stop-opacity:1" />
+    </linearGradient>
+    <!-- Glow Filter -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background Space -->
+  <rect width="400" height="800" fill="#0a0a0a"/>
+  
+  <!-- Floating Bitmap Blocks -->
+  <g id="blocks" filter="url(#glow)">
+    <!-- Block 1 - Large -->
+    <g transform="translate(50, 100)">
+      <rect x="0" y="0" width="120" height="120" fill="url(#btcOrange)" rx="8"/>
+      <rect x="10" y="10" width="100" height="100" fill="#1a1a1a" rx="4"/>
+      <text x="60" y="70" text-anchor="middle" fill="#F7931A" font-size="24" font-weight="bold">₿</text>
+      <text x="60" y="95" text-anchor="middle" fill="#666" font-size="10">#720143</text>
+    </g>
+    
+    <!-- Block 2 - Medium -->
+    <g transform="translate(200, 250)">
+      <rect x="0" y="0" width="80" height="80" fill="url(#btcOrange)" rx="6"/>
+      <rect x="8" y="8" width="64" height="64" fill="#1a1a1a" rx="3"/>
+      <text x="40" y="50" text-anchor="middle" fill="#F7931A" font-size="20">₿</text>
+    </g>
+    
+    <!-- Block 3 - Small -->
+    <g transform="translate(80, 400)">
+      <rect x="0" y="0" width="60" height="60" fill="url(#btcOrange)" rx="4"/>
+      <rect x="6" y="6" width="48" height="48" fill="#1a1a1a" rx="2"/>
+      <text x="30" y="38" text-anchor="middle" fill="#F7931A" font-size="16">₿</text>
+    </g>
+    
+    <!-- Block 4 - Large -->
+    <g transform="translate(180, 500)">
+      <rect x="0" y="0" width="140" height="140" fill="url(#btcOrange)" rx="10"/>
+      <rect x="12" y="12" width="116" height="116" fill="#1a1a1a" rx="5"/>
+      <text x="70" y="85" text-anchor="middle" fill="#F7931A" font-size="36" font-weight="bold">₿</text>
+      <text x="70" y="115" text-anchor="middle" fill="#666" font-size="12">#718840</text>
+    </g>
+  </g>
+  
+  <!-- Transaction Lines -->
+  <g stroke="#F7931A" stroke-width="1" opacity="0.5">
+    <line x1="110" y1="220" x2="240" y2="290">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+    </line>
+    <line x1="240" y1="330" x2="110" y2="430">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="2.5s" repeatCount="indefinite"/>
+    </line>
+    <line x1="110" y1="460" x2="250" y2="570">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" repeatCount="indefinite"/>
+    </line>
+  </g>
+  
+  <!-- Golden Particles -->
+  <g fill="#FFD700" opacity="0.6">
+    <circle cx="50" cy="200" r="2">
+      <animate attributeName="cy" values="200;100;200" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="350" cy="300" r="3">
+      <animate attributeName="cy" values="300;200;300" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="100" cy="600" r="2">
+      <animate attributeName="cy" values="600;500;600" dur="6s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="300" cy="700" r="2">
+      <animate attributeName="cy" values="700;600;700" dur="4.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- Title -->
+  <text x="200" y="750" text-anchor="middle" fill="#F7931A" font-size="28" font-weight="bold" filter="url(#glow)">BITMAP</text>
+  <text x="200" y="775" text-anchor="middle" fill="#666" font-size="14">Digital Land Empire</text>
+</svg>

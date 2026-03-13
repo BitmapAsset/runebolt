@@ -1,0 +1,86 @@
+<!-- $DOG Astronaut - Runestone Guardian (Right Top) -->
+<svg id="dog-astronaut" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFA500;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF8C00;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="runestoneGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#FFD700;stop-opacity:0" />
+    </radialGradient>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Space Background -->
+  <rect width="400" height="300" fill="#0a0a1a"/>
+  
+  <!-- Stars -->
+  <g fill="#FFF" opacity="0.8">
+    <circle cx="50" cy="50" r="1.5"/>
+    <circle cx="350" cy="80" r="1"/>
+    <circle cx="300" cy="40" r="1.5"/>
+    <circle cx="80" cy="120" r="1"/>
+    <circle cx="370" cy="200" r="1"/>
+    <circle cx="30" cy="250" r="1.5"/>
+    <circle cx="380" cy="270" r="1"/>
+  </g>
+  
+  <!-- Runestone Background -->
+  <ellipse cx="200" cy="150" rx="120" ry="100" fill="url(#runestoneGlow)" opacity="0.4">
+    <animate attributeName="opacity" values="0.4;0.6;0.4" dur="3s" repeatCount="indefinite"/>
+  </ellipse>
+  
+  <!-- Runestone Symbol -->
+  <text x="200" y="100" text-anchor="middle" fill="#FFD700" font-size="48" font-weight="bold" opacity="0.3">ᛤ</text>
+  
+  <!-- $DOG Character -->
+  <g transform="translate(200, 160)" filter="url(#softGlow)">
+    <!-- Body/Astronaut Suit -->
+    <ellipse cx="0" cy="20" rx="50" ry="60" fill="url(#goldGrad)"/>
+    
+    <!-- Head -->
+    <circle cx="0" cy="-30" r="35" fill="#D4A574"/>
+    
+    <!-- Ears -->
+    <ellipse cx="-25" cy="-45" rx="12" ry="20" fill="#D4A574" transform="rotate(-20)"/>
+    <ellipse cx="25" cy="-45" rx="12" ry="20" fill="#D4A574" transform="rotate(20)"/>
+    
+    <!-- Face -->
+    <circle cx="-10" cy="-35" r="4" fill="#333"/>
+    <circle cx="10" cy="-35" r="4" fill="#333"/>
+    <ellipse cx="0" cy="-25" rx="8" ry="6" fill="#333"/>
+    <path d="M -15 -15 Q 0 -5 15 -15" stroke="#333" stroke-width="2" fill="none"/>
+    
+    <!-- Astronaut Helmet Rim -->
+    <circle cx="0" cy="-30" r="38" fill="none" stroke="#FFD700" stroke-width="4"/>
+    
+    <!-- $ Symbol on Chest -->
+    <text x="0" y="30" text-anchor="middle" fill="#1a1a1a" font-size="32" font-weight="bold">$</text>
+    
+    <!-- DOG text -->
+    <text x="0" y="50" text-anchor="middle" fill="#1a1a1a" font-size="12" font-weight="bold">DOG</text>
+    
+    <!-- Floating Animation -->
+    <animateTransform attributeName="transform" type="translate" values="200,160; 200,150; 200,160" dur="3s" repeatCount="indefinite"/>
+  </g>
+  
+  <!-- Moon Surface -->
+  <ellipse cx="200" cy="280" rx="150" ry="30" fill="#333" opacity="0.3"/>
+  
+  <!-- To The Moon Text -->
+  <text x="200" y="30" text-anchor="middle" fill="#FFD700" font-size="20" font-weight="bold">TO THE MOON</text>
+  <text x="200" y="50" text-anchor="middle" fill="#FFA500" font-size="12">#1 Meme Coin on Bitcoin</text>
+  
+  <!-- Logo Badge -->
+  <circle cx="320" cy="80" r="25" fill="#1a1a1a" stroke="#FFD700" stroke-width="2"/>
+  <text x="320" y="85" text-anchor="middle" fill="#FFD700" font-size="16" font-weight="bold">$</text>
+  <text x="320" y="95" text-anchor="middle" fill="#666" font-size="8">DOG</text>
+</svg>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RuneBolt ⚡ The Lightning Deed Protocol</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --btc-orange: #F7931A;
+      --btc-gold: #FFD700;
+      --lightning-blue: #00D4FF;
+      --dark-bg: #0a0a0f;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--dark-bg);
+      color: #fff;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 300px 1fr 300px;
+      gap: 30px;
+    }
+    .header {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 40px;
+      background: rgba(10,10,15,0.95);
+      border-radius: 20px;
+      border: 2px solid var(--btc-orange);
+      box-shadow: 0 0 50px rgba(247,147,26,0.3);
+    }
+    .logo {
+      font-size: 4rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--btc-orange), var(--btc-gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 60px rgba(247,147,26,0.5);
+    }
+    .main-content {
+      background: rgba(10,10,15,0.95);
+      border-radius: 20px;
+      border: 2px solid var(--lightning-blue);
+      padding: 40px;
+      text-align: center;
+      box-shadow: 0 0 60px rgba(0,212,255,0.2);
+    }
+    .cta-button {
+      background: linear-gradient(135deg, var(--btc-orange), var(--btc-gold));
+      color: #000;
+      font-size: 1.4rem;
+      font-weight: bold;
+      padding: 20px 60px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 10px 40px rgba(247,147,26,0.4);
+    }
+    .cta-button:hover {
+      transform: translateY(-3px) scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1 class="logo">⚡ RUNEBOLT</h1>
+      <p>Transfer Bitcoin Assets in &lt;1 Second</p>
+    </header>
+    <div class="main-content">
+      <h2>Lightning Deed Protocol</h2>
+      <button class="cta-button">Start Transfer ⚡</button>
+    </div>
+  </div>
+</body>
+</html>

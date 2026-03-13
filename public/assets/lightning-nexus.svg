@@ -1,0 +1,142 @@
+<!-- Lightning Nexus - Energy Bridge (Background) -->
+<svg id="lightning-nexus" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="electricBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00D4FF;stop-opacity:0.8" />
+      <stop offset="50%" style="stop-color:#0099CC;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#006699;stop-opacity:0.4" />
+    </linearGradient>
+    <radialGradient id="energyCore" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#00D4FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00D4FF;stop-opacity:0" />
+    </radialGradient>
+    <filter id="electricGlow">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="lightningGlow">
+      <feGaussianBlur stdDeviation="15" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Dark Background -->
+  <rect width="1200" height="800" fill="#050508"/>
+  
+  <!-- Grid Background -->
+  <g stroke="#00D4FF" stroke-width="0.3" opacity="0.1">
+    <defs>
+      <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+        <path d="M 50 0 L 0 0 0 50" fill="none"/>
+      </pattern>
+    </defs>
+    <rect width="1200" height="800" fill="url(#grid)"/>
+  </g>
+  
+  <!-- Energy Core (Center) -->
+  <circle cx="600" cy="400" r="200" fill="url(#energyCore)" opacity="0.3">
+    <animate attributeName="r" values="200;220;200" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.3;0.5;0.3" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Main Lightning Bolt -->
+  <g filter="url(#lightningGlow)">
+    <path d="M 600 100 L 580 300 L 620 350 L 590 500 L 610 550 L 600 700" 
+          stroke="#00D4FF" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <animate attributeName="stroke-width" values="8;12;8" dur="0.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="1;0.7;1" dur="0.3s" repeatCount="indefinite"/>
+    </path>
+    
+    <!-- Branching Lightning -->
+    <path d="M 580 300 L 400 200" stroke="#00D4FF" stroke-width="3" fill="none" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.3;0.8" dur="0.8s" repeatCount="indefinite"/>
+    </path>
+    <path d="M 620 350 L 800 300" stroke="#00D4FF" stroke-width="3" fill="none" opacity="0.8">
+      <animate attributeName="opacity" values="0.3;0.8;0.3" dur="0.6s" repeatCount="indefinite"/>
+    </path>
+    <path d="M 590 500 L 300 600" stroke="#00D4FF" stroke-width="4" fill="none" opacity="0.7">
+      <animate attributeName="opacity" values="0.7;0.2;0.7" dur="0.7s" repeatCount="indefinite"/>
+    </path>
+    <path d="M 610 550 L 900 500" stroke="#00D4FF" stroke-width="4" fill="none" opacity="0.7">
+      <animate attributeName="opacity" values="0.2;0.7;0.2" dur="0.9s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <!-- Sats Flowing -->
+  <g fill="#FFD700" opacity="0.8">
+    <!-- Sat 1 -->
+    <circle cx="200" cy="300" r="3">
+      <animate attributeName="cx" values="200;600;1000" dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;0" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <!-- Sat 2 -->
+    <circle cx="800" cy="400" r="4">
+      <animate attributeName="cx" values="800;600;400" dur="4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;0" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <!-- Sat 3 -->
+    <circle cx="400" cy="500" r="2">
+      <animate attributeName="cy" values="500;400;300" dur="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;0" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <!-- Sat 4 -->
+    <circle cx="1000" cy="600" r="3">
+      <animate attributeName="cx" values="1000;600;200" dur="3.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;0" dur="3.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- Electric Arcs -->
+  <g stroke="#00D4FF" stroke-width="2" fill="none" opacity="0.6" filter="url(#electricGlow)">
+    <path d="M 100 200 Q 300 100 500 200">
+      <animate attributeName="d" values="M 100 200 Q 300 100 500 200; M 100 220 Q 300 120 500 220; M 100 200 Q 300 100 500 200" dur="2s" repeatCount="indefinite"/>
+    </path>
+    <path d="M 700 300 Q 900 200 1100 300">
+      <animate attributeName="d" values="M 700 300 Q 900 200 1100 300; M 700 320 Q 900 220 1100 320; M 700 300 Q 900 200 1100 300" dur="2.5s" repeatCount="indefinite"/>
+    </path>
+    <path d="M 50 600 Q 250 500 450 600">
+      <animate attributeName="d" values="M 50 600 Q 250 500 450 600; M 50 620 Q 250 520 450 620; M 50 600 Q 250 500 450 600" dur="3s" repeatCount="indefinite"/>
+    </path>
+    <path d="M 750 700 Q 950 600 1150 700">
+      <animate attributeName="d" values="M 750 700 Q 950 600 1150 700; M 750 720 Q 950 620 1150 720; M 750 700 Q 950 600 1150 700" dur="2.2s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  
+  <!-- Glowing Orbs -->
+  <circle cx="200" cy="400" r="15" fill="#00D4FF" opacity="0.5" filter="url(#electricGlow)">
+    <animate attributeName="opacity" values="0.5;0.8;0.5" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="r" values="15;20;15" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="1000" cy="400" r="15" fill="#00D4FF" opacity="0.5" filter="url(#electricGlow)">
+    <animate attributeName="opacity" values="0.5;0.8;0.5" dur="3.5s" repeatCount="indefinite"/>
+    <animate attributeName="r" values="15;20;15" dur="3.5s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Connection Lines (Deed Locks) -->
+  <g stroke="#F7931A" stroke-width="2" opacity="0.4" stroke-dasharray="5,5">
+    <line x1="200" y1="200" x2="600" y2="400">
+      <animate attributeName="stroke-dashoffset" values="0;10" dur="1s" repeatCount="indefinite"/>
+    </line>
+    <line x1="1000" y1="200" x2="600" y2="400">
+      <animate attributeName="stroke-dashoffset" values="0;10" dur="1.2s" repeatCount="indefinite"/>
+    </line>
+    <line x1="200" y1="600" x2="600" y2="400">
+      <animate attributeName="stroke-dashoffset" values="0;10" dur="0.8s" repeatCount="indefinite"/>
+    </line>
+    <line x1="1000" y1="600" x2="600" y2="400">
+      <animate attributeName="stroke-dashoffset" values="0;10" dur="1.1s" repeatCount="indefinite"/>
+    </line>
+  </g>
+  
+  <!-- Central RuneBolt Logo Placeholder -->
+  <circle cx="600" cy="400" r="80" fill="#0a0a0a" stroke="#00D4FF" stroke-width="3" opacity="0.9"/>
+  <text x="600" y="390" text-anchor="middle" fill="#00D4FF" font-size="20" font-weight="bold">⚡</text>
+  <text x="600" y="420" text-anchor="middle" fill="#FFF" font-size="12" font-weight="bold">RUNEBOLT</text>
+</svg>

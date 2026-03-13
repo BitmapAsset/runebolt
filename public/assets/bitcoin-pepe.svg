@@ -1,0 +1,111 @@
+<!-- Pepe BRC20 - The Bitcoin Frog (Right Middle) -->
+<svg id="bitcoin-pepe" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="pepeGreen" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" style="stop-color:#7CB342;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#558B2F;stop-opacity:1" />
+    </radialGradient>
+    <linearGradient id="btcEyes" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F7931A;stop-opacity:1" />
+    </linearGradient>
+    <filter id="pepeGlow">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Cyber Background -->
+  <rect width="400" height="300" fill="#0a0f0a"/>
+  
+  <!-- Grid Lines -->
+  <g stroke="#1a3a1a" stroke-width="0.5" opacity="0.3">
+    <line x1="0" y1="50" x2="400" y2="50"/>
+    <line x1="0" y1="100" x2="400" y2="100"/>
+    <line x1="0" y1="150" x2="400" y2="150"/>
+    <line x1="0" y1="200" x2="400" y2="200"/>
+    <line x1="0" y1="250" x2="400" y2="250"/>
+  </g>
+  
+  <!-- Bitcoin Glow Aura -->
+  <ellipse cx="200" cy="150" rx="110" ry="90" fill="#F7931A" opacity="0.1">
+    <animate attributeName="opacity" values="0.1;0.2;0.1" dur="3s" repeatCount="indefinite"/>
+  </ellipse>
+  
+  <!-- Pepe Character -->
+  <g transform="translate(200, 160)" filter="url(#pepeGlow)">
+    <!-- Body -->
+    <ellipse cx="0" cy="50" rx="55" ry="60" fill="url(#pepeGreen)"/>
+    
+    <!-- Head -->
+    <ellipse cx="0" cy="-20" rx="60" ry="50" fill="url(#pepeGreen)"/>
+    
+    <!-- Eyes (Bitcoin themed) -->
+    <circle cx="-25" cy="-35" r="20" fill="#FFF"/>
+    <circle cx="25" cy="-35" r="20" fill="#FFF"/>
+    <circle cx="-25" cy="-35" r="14" fill="url(#btcEyes)"/>
+    <circle cx="25" cy="-35" r="14" fill="url(#btcEyes)"/>
+    <circle cx="-25" cy="-35" r="6" fill="#000">
+      <animate attributeName="r" values="6;2;6" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="25" cy="-35" r="6" fill="#000">
+      <animate attributeName="r" values="6;2;6" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- Eyelids -->
+    <path d="M -45 -40 Q -25 -50 -5 -40" stroke="#558B2F" stroke-width="3" fill="none"/>
+    <path d="M 5 -40 Q 25 -50 45 -40" stroke="#558B2F" stroke-width="3" fill="none"/>
+    
+    <!-- Mouth -->
+    <path d="M -20 0 Q 0 15 20 0" stroke="#333" stroke-width="3" fill="#E8D5B7"/>
+    <line x1="0" y1="0" x2="0" y2="10" stroke="#333" stroke-width="1"/>
+    
+    <!-- Smile Line -->
+    <path d="M -25 -5 Q -15 5 -5 -5" stroke="#333" stroke-width="1.5" fill="none"/>
+    <path d="M 5 -5 Q 15 5 25 -5" stroke="#333" stroke-width="1.5" fill="none"/>
+    
+    <!-- Cheeks -->
+    <ellipse cx="-40" cy="-5" rx="10" ry="6" fill="#FFB6C1" opacity="0.6"/>
+    <ellipse cx="40" cy="-5" rx="10" ry="6" fill="#FFB6C1" opacity="0.6"/>
+    
+    <!-- Hands -->
+    <ellipse cx="-50" cy="40" rx="15" ry="20" fill="url(#pepeGreen)"/>
+    <ellipse cx="50" cy="40" rx="15" ry="20" fill="url(#pepeGreen)"/>
+    
+    <!-- Holding Bitcoin -->
+    <circle cx="-50" cy="30" r="12" fill="#F7931A"/>
+    <text x="-50" y="35" text-anchor="middle" fill="#1a1a1a" font-size="14" font-weight="bold">₿</text>
+    
+    <!-- BRC-20 Token -->
+    <circle cx="50" cy="30" r="12" fill="#FFD700"/>
+    <text x="50" y="34" text-anchor="middle" fill="#1a1a1a" font-size="10" font-weight="bold">20</text>
+    
+    <!-- Floating Animation -->
+    <animateTransform attributeName="transform" type="translate" values="200,160; 200,155; 200,160" dur="2.8s" repeatCount="indefinite"/>
+  </g>
+  
+  <!-- Title -->
+  <text x="200" y="30" text-anchor="middle" fill="#7CB342" font-size="24" font-weight="bold" filter="url(#pepeGlow)">PEPE BRC20</text>
+  <text x="200" y="50" text-anchor="middle" fill="#F7931A" font-size="14">Bitcoin's Culture Coin</text>
+  
+  <!-- BRC-20 Badge -->
+  <rect x="30" y="250" width="80" height="30" rx="5" fill="#1a1a1a" stroke="#7CB342" stroke-width="2"/>
+  <text x="70" y="270" text-anchor="middle" fill="#7CB342" font-size="11" font-weight="bold">BRC-20</text>
+  
+  <!-- Rare Pepe Indicator -->
+  <rect x="290" y="250" width="80" height="30" rx="5" fill="#1a1a1a" stroke="#FFD700" stroke-width="2"/>
+  <text x="330" y="270" text-anchor="middle" fill="#FFD700" font-size="11" font-weight="bold">RARE</text>
+  
+  <!-- Glitch Effect Lines -->
+  <g stroke="#7CB342" stroke-width="1" opacity="0.3">
+    <line x1="100" y1="100" x2="150" y2="100">
+      <animate attributeName="opacity" values="0.3;0;0.3" dur="0.2s" repeatCount="indefinite"/>
+    </line>
+    <line x1="250" y1="200" x2="300" y2="200">
+      <animate attributeName="opacity" values="0;0.3;0" dur="0.3s" repeatCount="indefinite"/>
+    </line>
+  </g>
+</svg>
