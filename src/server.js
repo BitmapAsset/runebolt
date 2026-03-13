@@ -8,6 +8,14 @@ const express = require('express');
 const cors = require('cors');
 const LndClient = require('./lnd');
 const RuneBoltBridge = require('./bridge');
+const { getAssetBalance, clearAddressCache, verifyAssetOwnership } = require('../dist/indexer');
+const { 
+  createHTLCScript, 
+  buildLockTransaction, 
+  buildClaimTransaction,
+  buildRefundTransaction,
+  generatePreimage 
+} = require('../dist/wallet/psbt');
 
 const app = express();
 app.use(cors());
@@ -23,6 +31,9 @@ const bridge = new RuneBoltBridge(lnd, {
   feeRate: parseFloat(process.env.RUNEBOLT_FEE_RATE || '0.003'),
 });
 
+// In-memory store for pending swaps (would use Redis in production)
+const pendingSwaps = new Map();
+
 // ── Health & Status ──────────────────────────────────────────────
 
 app.get('/api/health', (req, res) => {
@@ -36,6 +47,57 @@ app.get('/api/status', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── Runes Indexer ────────────────────────────────────────────────
+
+// Get asset balances for an address
+app.get('/api/runes/:address/balances', async (req, res) => {
+  try {
+    const { address } = req.params;
+    const network = req.query.network || 'mainnet';
+    
+    if (!address || !address.match(/^(bc1|tb1|bcrt1)/)) {
+      return res.status(400).json({ error: 'Invalid Bitcoin address' });
+    }
+
+    const balances = await getAssetBalance(address, network);
+    res.json(balances);
+  } catch (err) {
+    console.error('Error fetching balances:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Verify asset ownership
+app.get('/api/runes/:address/verify', async (req, res) => {
+  try {
+    const { address } = req.params;
+    const { assetType, assetId, amount, network } = req.query;
+    
+    if (!assetType || !assetId) {
+      return res.status(400).json({ error: 'assetType and assetId required' });
+    }
+
+    const owns = await verifyAssetOwnership(
+      address, 
+      assetType, 
+      assetId, 
+      parseInt(amount) || 1, 
+      network || 'mainnet'
+    );
+    
+    res.json({ address, assetType, assetId, owns });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Clear cache for an address (call after transactions)
+app.post('/api/runes/:address/clear-cache', (req, res) => {
+  const { address } = req.params;
+  clearAddressCache(address);
+  res.json({ success: true, message: 'Cache cleared' });
 });
 
 // ── Lightning Direct ─────────────────────────────────────────────
@@ -78,6 +140,25 @@ app.get('/api/lightning/decode/:payreq', async (req, res) => {
   }
 });
 
+// Check invoice status
+app.get('/api/lightning/invoice/:paymentHash', async (req, res) => {
+  try {
+    const { paymentHash } = req.params;
+    const invoice = await lnd.lookupInvoice(paymentHash);
+    res.json({
+      settled: invoice.state === 'SETTLED',
+      state: invoice.state,
+      amount: invoice.value,
+      memo: invoice.memo,
+      creationDate: invoice.creation_date,
+      settleDate: invoice.settle_date,
+      paymentHash,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Node info
 app.get('/api/lightning/info', async (req, res) => {
   try {
@@ -95,7 +176,197 @@ app.get('/api/lightning/info', async (req, res) => {
   }
 });
 
-// ── RuneBolt Bridge ──────────────────────────────────────────────
+// ── HTLC Bridge Operations ───────────────────────────────────────
+
+// Create HTLC lock address
+app.post('/api/bridge/htlc/create', async (req, res) => {
+  try {
+    const { 
+      senderPubkey, 
+      recipientPubkey, 
+      timeoutBlockHeight, 
+      network = 'testnet',
+      assetId 
+    } = req.body;
+
+    if (!senderPubkey || !recipientPubkey || !timeoutBlockHeight) {
+      return res.status(400).json({ 
+        error: 'senderPubkey, recipientPubkey, and timeoutBlockHeight required' 
+      });
+    }
+
+    // Generate random preimage for this HTLC
+    const { preimage, paymentHash } = generatePreimage();
+
+    // Create HTLC script
+    const htlc = createHTLCScript({
+      senderPubkey: Buffer.from(senderPubkey, 'hex'),
+      recipientPubkey: Buffer.from(recipientPubkey, 'hex'),
+      paymentHash,
+      timeoutBlockHeight,
+      assetId: assetId || 'BTC',
+      network,
+    });
+
+    // Store swap details
+    const swapId = paymentHash.toString('hex');
+    pendingSwaps.set(swapId, {
+      id: swapId,
+      preimage: preimage.toString('hex'),
+      paymentHash: swapId,
+      senderPubkey,
+      recipientPubkey,
+      timeoutBlockHeight,
+      htlcAddress: htlc.p2shAddress,
+      status: 'pending_lock',
+      createdAt: new Date().toISOString(),
+    });
+
+    res.json({
+      swapId,
+      htlcAddress: htlc.p2shAddress,
+      redeemScript: htlc.redeemScript.toString('hex'),
+      paymentHash: swapId,
+      timeoutBlockHeight,
+      network,
+    });
+  } catch (err) {
+    console.error('HTLC creation error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Build lock transaction (PSBT)
+app.post('/api/bridge/build-lock-tx', async (req, res) => {
+  try {
+    const {
+      senderAddress,
+      htlcAddress,
+      assetAmount,
+      fundingUTXOs,
+      changeAddress,
+      feeRate,
+      network = 'testnet',
+    } = req.body;
+
+    if (!senderAddress || !htlcAddress || !fundingUTXOs || !changeAddress) {
+      return res.status(400).json({ 
+        error: 'senderAddress, htlcAddress, fundingUTXOs, and changeAddress required' 
+      });
+    }
+
+    const result = buildLockTransaction({
+      senderAddress,
+      htlcAddress,
+      assetAmount: assetAmount || 10000,
+      fundingUTXOs,
+      changeAddress,
+      feeRate: feeRate || 2,
+      network,
+    });
+
+    res.json({
+      psbtBase64: result.psbtBase64,
+      htlcAddress,
+      assetAmount: assetAmount || 10000,
+    });
+  } catch (err) {
+    console.error('Build lock tx error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Build claim transaction (PSBT)
+app.post('/api/bridge/build-claim-tx', async (req, res) => {
+  try {
+    const {
+      htlcUTXO,
+      redeemScript,
+      preimage,
+      recipientAddress,
+      feeRate,
+      network = 'testnet',
+    } = req.body;
+
+    if (!htlcUTXO || !redeemScript || !preimage || !recipientAddress) {
+      return res.status(400).json({ 
+        error: 'htlcUTXO, redeemScript, preimage, and recipientAddress required' 
+      });
+    }
+
+    // Note: This returns an unsigned PSBT - client must sign with recipientPrivkey
+    // For production, we might use a different flow with server-side signing
+    res.json({
+      htlcUTXO,
+      redeemScript,
+      preimage,
+      recipientAddress,
+      feeRate: feeRate || 2,
+      network,
+      instructions: 'Sign this PSBT with recipient private key and broadcast',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Build refund transaction (PSBT)
+app.post('/api/bridge/build-refund-tx', async (req, res) => {
+  try {
+    const {
+      htlcUTXO,
+      redeemScript,
+      senderAddress,
+      timeoutBlockHeight,
+      feeRate,
+      network = 'testnet',
+    } = req.body;
+
+    if (!htlcUTXO || !redeemScript || !senderAddress || !timeoutBlockHeight) {
+      return res.status(400).json({ 
+        error: 'htlcUTXO, redeemScript, senderAddress, and timeoutBlockHeight required' 
+      });
+    }
+
+    res.json({
+      htlcUTXO,
+      redeemScript,
+      senderAddress,
+      timeoutBlockHeight,
+      feeRate: feeRate || 2,
+      network,
+      instructions: 'This transaction can only be broadcast after timeoutBlockHeight',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get swap status
+app.get('/api/bridge/swap/:swapId', (req, res) => {
+  const swap = pendingSwaps.get(req.params.swapId);
+  if (!swap) {
+    return res.status(404).json({ error: 'Swap not found' });
+  }
+  res.json(swap);
+});
+
+// Update swap status
+app.post('/api/bridge/swap/:swapId/status', (req, res) => {
+  const { status, txid } = req.body;
+  const swap = pendingSwaps.get(req.params.swapId);
+  if (!swap) {
+    return res.status(404).json({ error: 'Swap not found' });
+  }
+  
+  swap.status = status;
+  if (txid) swap.txid = txid;
+  swap.updatedAt = new Date().toISOString();
+  
+  res.json(swap);
+});
+
+// ── RuneBolt Bridge (Legacy) ─────────────────────────────────────
 
 // List supported assets
 app.get('/api/bridge/assets', (req, res) => {
@@ -156,6 +427,13 @@ app.post('/api/bridge/inventory', (req, res) => {
   if (!runeId || !amount) return res.status(400).json({ error: 'runeId and amount required' });
   const result = bridge.addInventory(runeId, amount);
   res.json(result);
+});
+
+// ── Error Handling ───────────────────────────────────────────────
+
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // ── Start ────────────────────────────────────────────────────────

@@ -37,37 +37,7 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export const wallets = [
-  {
-    id: "unisat",
-    name: "Unisat",
-    icon: "🔶",
-    description: "Most popular Bitcoin wallet",
-    installed: typeof window !== "undefined" && !!(window as any).unisat,
-  },
-  {
-    id: "xverse",
-    name: "Xverse",
-    icon: "🌐",
-    description: "Mobile & desktop Bitcoin wallet",
-    installed: typeof window !== "undefined" && !!(window as any).xverse,
-  },
-  {
-    id: "leather",
-    name: "Leather",
-    icon: "🦊",
-    description: "Stacks & Bitcoin wallet",
-    installed: typeof window !== "undefined" && !!(window as any).leather,
-  },
-  {
-    id: "okx",
-    name: "OKX Wallet",
-    icon: "🔵",
-    description: "Multi-chain exchange wallet",
-    installed: typeof window !== "undefined" && !!(window as any).okxwallet,
-  },
-];
-
+// Asset type definitions
 export type AssetType = "rune" | "ordinal" | "bitmap" | "brc20";
 
 export interface Asset {
@@ -79,6 +49,7 @@ export interface Asset {
   image?: string;
   inscriptionId?: string;
   blockNumber?: number;
+  decimals?: number;
 }
 
 export interface Transaction {
@@ -92,63 +63,3 @@ export interface Transaction {
   timestamp: Date;
   txid?: string;
 }
-
-export const mockAssets: Asset[] = [
-  {
-    id: "1",
-    type: "rune",
-    name: "DOG•GO•TO•THE•MOON",
-    symbol: "$DOG",
-    amount: 5000000,
-    image: "🐕",
-  },
-  {
-    id: "2",
-    type: "bitmap",
-    name: "Bitmap #720143",
-    blockNumber: 720143,
-    amount: 1,
-    image: "🏙️",
-  },
-  {
-    id: "3",
-    type: "ordinal",
-    name: "Inscription #119366628",
-    inscriptionId: "119366628",
-    amount: 1,
-    image: "🎨",
-  },
-  {
-    id: "4",
-    type: "rune",
-    name: "UNCOMMON•GOODS",
-    symbol: "UNCOMMON",
-    amount: 1000,
-    image: "💎",
-  },
-];
-
-export const mockTransactions: Transaction[] = [
-  {
-    id: "1",
-    type: "receive",
-    asset: mockAssets[0],
-    amount: 1000000,
-    from: "bc1p...xyz",
-    to: "bc1p...abc",
-    status: "completed",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    txid: "abc123...",
-  },
-  {
-    id: "2",
-    type: "send",
-    asset: mockAssets[1],
-    amount: 1,
-    from: "bc1p...abc",
-    to: "bc1p...def",
-    status: "pending",
-    timestamp: new Date(Date.now() - 1000 * 60 * 5),
-    txid: "def456...",
-  },
-];
