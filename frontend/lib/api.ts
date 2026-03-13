@@ -3,7 +3,7 @@
  * Frontend API integration for RuneBolt backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_RUNEBOLT_API_URL || 'http://localhost:3141';
+const API_BASE_URL = process.env.NEXT_PUBLIC_RUNEBOLT_API_URL || 'http://146.190.125.67:3141';
 
 // Types
 export interface AssetBalance {
