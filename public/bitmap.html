@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bitmap Transfer | RuneBolt ⚡</title>
+  <link rel="stylesheet" href="runebolt.css">
+  <style>
+    /* Bitmap-specific theme overrides */
+    .page-bitmap { --page-accent: var(--bitcoin-orange); --page-glow: rgba(247,147,26,0.3); }
+    .page-bitmap .logo-text { background: linear-gradient(135deg, var(--bitcoin-orange), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .page-bitmap .wallet-btn { background: linear-gradient(135deg, var(--bitcoin-orange), var(--gold)); }
+    .page-bitmap .step-number { background: linear-gradient(135deg, var(--bitcoin-orange), var(--gold)); }
+    .page-bitmap .transfer-header { background: linear-gradient(135deg, rgba(247,147,26,0.2), rgba(255,215,0,0.1)); }
+    .page-bitmap .btn-primary { background: linear-gradient(135deg, var(--bitcoin-orange), var(--gold)); }
+    .page-bitmap .asset-preview { border-color: var(--bitcoin-orange); }
+    
+    /* Block grid for bitmap selection */
+    .block-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .block-item {
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, rgba(247,147,26,0.2), rgba(255,215,0,0.1));
+      border: 2px solid var(--bitcoin-orange);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+    .block-item:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(247,147,26,0.4); }
+    .block-item.selected { background: linear-gradient(135deg, var(--bitcoin-orange), var(--gold)); color: #000; }
+    .block-item .block-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .block-item .block-num { font-size: 0.75rem; font-weight: 600; }
+    .block-item .block-check {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 16px;
+      height: 16px;
+      background: var(--success);
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+    }
+    .block-item.selected .block-check { display: flex; }
+  </style>
+</head>
+<body class="page-bitmap">
+  <!-- Background -->
+  <div class="gradient-overlay"></div>
+  <div class="particles">
+    <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">⚡</div>
+        <span class="logo-text">RUNEBOLT</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="bitmap.html" class="nav-link active">Bitmap</a>
+        <a href="dog.html" class="nav-link">$DOG</a>
+        <a href="bdc.html" class="nav-link">$BILLY</a>
+        <a href="brc20.html" class="nav-link">BRC-20</a>
+      </nav>
+      <button class="wallet-btn" onclick="connectWallet()">🔗 Connect Wallet</button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Transfer Header -->
+    <section class="transfer-header">
+      <div class="transfer-header-content">
+        <div class="asset-preview">
+          <object data="assets/bitmap-metropolis.svg" type="image/svg+xml"></object>
+        </div>
+        <div class="transfer-title">
+          <h1>Bitmap Transfer</h1>
+          <p>Transfer Bitcoin blocks instantly via Lightning</p>
+          <div class="asset-tags">
+            <span class="tag">Bitmap</span>
+            <span class="tag">Non-Fungible</span>
+            <span class="tag">Block #720143+</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transfer Flow -->
+    <section class="transfer-flow">
+      <div class="flow-container">
+        
+        <!-- Step 1: Connect Wallet -->
+        <div class="flow-step active" id="step-connect">
+          <div class="step-header">
+            <span class="step-num">1</span>
+            <h3>Connect Wallet</h3>
+          </div>
+          <div class="step-content">
+            <p class="step-desc">Connect your Bitcoin wallet to access your Bitmap blocks</p>
+            <button class="btn btn-primary btn-full" onclick="connectWallet()">
+              🔗 Connect Unisat / Xverse
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Select Blocks -->
+        <div class="flow-step" id="step-select">
+          <div class="step-header">
+            <span class="step-num">2</span>
+            <h3>Select Blocks</h3>
+          </div>
+          <div class="step-content">
+            <p class="step-desc">Choose which Bitmap blocks to deposit to RuneBolt</p>
+            <div class="wallet-info">
+              <span class="wallet-balance">Balance: 5 Bitmaps</span>
+              <span class="wallet-addr">bc1p...a8978</span>
+            </div>
+            <div class="block-grid">
+              <div class="block-item selected" onclick="toggleBlock(this)">
+                <span class="block-icon">₿</span>
+                <span class="block-num">#720143</span>
+                <span class="block-check">✓</span>
+              </div>
+              <div class="block-item selected" onclick="toggleBlock(this)">
+                <span class="block-icon">₿</span>
+                <span class="block-num">#718840</span>
+                <span class="block-check">✓</span>
+              </div>
+              <div class="block-item" onclick="toggleBlock(this)">
+                <span class="block-icon">₿</span>
+                <span class="block-num">#720000</span>
+                <span class="block-check">✓</span>
+              </div>
+              <div class="block-item" onclick="toggleBlock(this)">
+                <span class="block-icon">₿</span>
+                <span class="block-num">#719500</span>
+                <span class="block-check">✓</span>
+              </div>
+              <div class="block-item" onclick="toggleBlock(this)">
+                <span class="block-icon">₿</span>
+                <span class="block-num">#721000</span>
+                <span class="block-check">✓</span>
+              </div>
+            </div>
+            <div class="selection-summary">
+              <span>Selected: <strong>2 blocks</strong></span>
+              <button class="btn btn-primary" onclick="goToDeposit()">Continue →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Deposit -->
+        <div class="flow-step" id="step-deposit">
+          <div class="step-header">
+            <span class="step-num">3</span>
+            <h3>Deposit to RuneBolt</h3>
+          </div>
+          <div class="step-content">
+            <p class="step-desc">Send your blocks to your RuneBolt deed address</p>
+            
+            <div class="deposit-info">
+              <div class="info-row">
+                <span>Asset</span>
+                <span>Bitmap (2 blocks)</span>
+              </div>
+              <div class="info-row">
+                <span>Deed Address</span>
+                <code class="deed-addr">bc1qrbolt...xyz789</code>
+              </div>
+              <div class="info-row">
+                <span>Est. Fee</span>
+                <span>~3,500 sats</span>
+              </div>
+            </div>
+
+            <div class="blocks-preview">
+              <div class="mini-block">#720143</div>
+              <div class="mini-block">#718840</div>
+            </div>
+
+            <button class="btn btn-primary btn-full" onclick="deposit()">
+              ⚡ Deposit to RuneBolt
+            </button>
+            <p class="step-note">One L1 transaction = unlimited L2 transfers</p>
+          </div>
+        </div>
+
+        <!-- Step 4: Transfer -->
+        <div class="flow-step" id="step-transfer">
+          <div class="step-header">
+            <span class="step-num">4</span>
+            <h3>Transfer</h3>
+          </div>
+          <div class="step-content">
+            <p class="step-desc">Send blocks instantly via Lightning</p>
+            
+            <div class="runebolt-balance">
+              <span class="balance-label">RuneBolt Balance</span>
+              <span class="balance-value">2 Bitmaps</span>
+            </div>
+
+            <div class="transfer-form">
+              <div class="form-group">
+                <label>Recipient Address</label>
+                <input type="text" placeholder="bc1p... or Lightning address" class="input-field">
+              </div>
+              <div class="form-group">
+                <label>Select Blocks to Send</label>
+                <div class="block-grid small">
+                  <div class="block-item selected">
+                    <span class="block-icon">₿</span>
+                    <span class="block-num">#720143</span>
+                  </div>
+                  <div class="block-item">
+                    <span class="block-icon">₿</span>
+                    <span class="block-num">#718840</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="transfer-fee">
+              <span>Transfer Fee: 0.1%</span>
+              <span class="fee-amount">~500 sats</span>
+            </div>
+
+            <button class="btn btn-primary btn-full" onclick="transfer()">
+              ⚡ Send Instantly
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 5: Withdraw -->
+        <div class="flow-step" id="step-withdraw">
+          <div class="step-header">
+            <span class="step-num">5</span>
+            <h3>Withdraw</h3>
+          </div>
+          <div class="step-content">
+            <p class="step-desc">Withdraw blocks back to L1 anytime</p>
+            
+            <div class="runebolt-balance">
+              <span class="balance-label">Available to Withdraw</span>
+              <span class="balance-value">2 Bitmaps</span>
+            </div>
+
+            <div class="withdraw-form">
+              <div class="form-group">
+                <label>Destination Address</label>
+                <input type="text" placeholder="Your Bitcoin address" class="input-field">
+              </div>
+              <div class="form-group">
+                <label>Select Blocks</label>
+                <div class="block-grid small">
+                  <div class="block-item selected">
+                    <span class="block-icon">₿</span>
+                    <span class="block-num">#720143</span>
+                  </div>
+                  <div class="block-item selected">
+                    <span class="block-icon">₿</span>
+                    <span class="block-num">#718840</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="withdraw-fee">
+              <span>Withdrawal Fee</span>
+              <span class="fee-amount">~2,500 sats (L1 miner fee)</span>
+            </div>
+
+            <button class="btn btn-outline btn-full" onclick="withdraw()">
+              🔓 Withdraw to L1
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="logo-icon">⚡</span>
+        <span>RUNEBOLT</span>
+      </div>
+      <p class="footer-text">Transfer Bitmap blocks instantly via Lightning</p>
+    </div>
+  </footer>
+
+  <script>
+    let selectedBlocks = ['#720143', '#718840'];
+    
+    function connectWallet() {
+      document.getElementById('step-connect').classList.remove('active');
+      document.getElementById('step-connect').classList.add('completed');
+      document.getElementById('step-select').classList.add('active');
+    }
+    
+    function toggleBlock(el) {
+      el.classList.toggle('selected');
+      updateSelection();
+    }
+    
+    function updateSelection() {
+      const selected = document.querySelectorAll('.block-item.selected');
+      document.querySelector('.selection-summary strong').textContent = selected.length + ' blocks';
+    }
+    
+    function goToDeposit() {
+      document.getElementById('step-select').classList.remove('active');
+      document.getElementById('step-select').classList.add('completed');
+      document.getElementById('step-deposit').classList.add('active');
+    }
+    
+    function deposit() {
+      document.getElementById('step-deposit').classList.remove('active');
+      document.getElementById('step-deposit').classList.add('completed');
+      document.getElementById('step-transfer').classList.add('active');
+      alert('Deposit transaction submitted! Waiting for confirmation...');
+    }
+    
+    function transfer() {
+      alert('Transfer complete! Blocks sent via Lightning ⚡');
+    }
+    
+    function withdraw() {
+      alert('Withdrawal initiated. Your blocks will arrive on L1 in the next block.');
+    }
+  </script>
+</body>
+</html>

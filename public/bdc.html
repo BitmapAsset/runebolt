@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>$BILLY Transfer | RuneBolt ⚡</title>
+  <link rel="stylesheet" href="runebolt.css">
+  <style>
+    /* Billy-specific theme overrides */
+    .page-billy { --page-accent: var(--cyan); --page-glow: rgba(0,206,209,0.3); }
+    .page-billy .logo-text { background: linear-gradient(135deg, var(--cyan), var(--silver)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .page-billy .wallet-btn { background: linear-gradient(135deg, var(--cyan), #00A0A3); }
+    .page-billy .step-number { background: linear-gradient(135deg, var(--cyan), var(--silver)); }
+    .page-billy .transfer-header { background: linear-gradient(135deg, rgba(0,206,209,0.15), rgba(192,192,192,0.1)); }
+    .page-billy .btn-primary { background: linear-gradient(135deg, var(--cyan), #00A0A3); }
+    .page-billy .asset-preview { border-color: var(--cyan); }
+    .page-billy .tag { background: rgba(0,206,209,0.2); color: var(--cyan); }
+    .page-billy .balance-value { color: var(--cyan); }
+    .page-billy .step-num { background: linear-gradient(135deg, var(--cyan), var(--silver)); }
+    .page-billy .input-field:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,206,209,0.2); }
+    
+    /* Cat styling */
+    .cat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: linear-gradient(135deg, rgba(0,206,209,0.2), rgba(192,192,192,0.1));
+      border: 1px solid var(--cyan);
+      border-radius: 50px;
+      font-size: 0.875rem;
+      color: var(--cyan);
+    }
+    .cat-paw {
+      display: inline-block;
+      animation: paw-tap 1.5s ease-in-out infinite;
+    }
+    @keyframes paw-tap {
+      0%, 100% { transform: rotate(-10deg); }
+      50% { transform: rotate(10deg); }
+    }
+  </style>
+</head>
+<body class="page-billy">
+  <!-- Background -->
+  <div class="gradient-overlay"></div>
+  <div class="particles">
+    <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">⚡</div>
+        <span class="logo-text">RUNEBOLT</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="bitmap.html" class="nav-link">Bitmap</a>
+        <a href="dog.html" class="nav-link">$DOG</a>
+        <a href="bdc.html" class="nav-link active">$BILLY</a>
+        <a href="brc20.html" class="nav-link">BRC-20</a>
+      </nav>
+      <button class="wallet-btn" onclick="connectWallet()">🔗 Connect Wallet</button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Transfer Header -->
+    <section class="transfer-header">
+      <div class="transfer-header-content">
+        <div class="asset-preview">
+          <object data="assets/billy-cat.svg" type="image/svg+xml"></object>
+        </div>
+        <div class="transfer-title">
+          <h1>$BILLY Transfer</h1>
+          <p>Billion Dollar Cat — The silver feline of Bitcoin</p>
+          <div class="asset-tags">
+            <span class="tag">Runes</span>
+            <span class="tag">Fungible</span>
+            <span class="cat-badge"><span class="cat-paw">🐾</span> Meow</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transfer Flow -->
+    <section class="transfer-flow">
+      <div class="flow-container">
+        
+        <!-- Step 1: Connect Wallet -->
+        <div class="flow-step active" id="step-connect">
+          <div class="step-header">
+            <span class="step-num">1</span>
+            <h3>Connect Wallet</h3>
+          </div>
+          <div class="step-content">
+            <p class="step-desc">Connect your Bitcoin wallet to access your $BILLY</p>
+            <button class="btn btn-primary btn-full" onclick="connectWallet()">
+              🔗 Connect Unisat / Xverse
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Enter Amount -->
+        <div class="flow-step" id="step-amount">
+          <div class="step-header">
+            <span class="step-num">2</span>
+            <h3>Enter Amount</h3>
+          </div>
+          <div class="step-content">
+            <p class="step-desc">How much $BILLY do you want to deposit?</p>
+            <div class="wallet-info">
+              <span class="wallet-balance">Balance: 888,888,888 BILLY</span>
+              <span class="wallet-addr">bc1p...a8978</span>
+            </div>
+            
+            <div class="amount-input-group">
+              <input type="number" class="input-field" placeholder="0.00" id="billy-amount">
+              <span class="input-suffix">BILLY</span>
+            </div>
+            
+            <div class="amount-presets">
+              <button class="preset-btn" onclick="setAmount(25)">25%</button>
+              <button class="preset-btn" onclick="setAmount(50)">50%</button>
+              <button class="preset-btn" onclick="setAmount(75)">75%</button>
+              <button class="preset-btn" onclick="setAmount(100)">MAX</button>
+            </div>
+
+            <div class="selection-summary">
+              <span>≈ <strong id="usd-value">$0.00</strong> USD</span>
+              <button class="btn btn-primary" onclick="goToDeposit()">Continue →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Deposit -->
+        <div class="flow-step" id="step-deposit">
+          <div class="step-header">
+            <span class="step-num">3</span>
+            <h3>Deposit to RuneBolt</h3>
+          </div>
+          <div class="step-content">
+            <p class="step-desc">Send your $BILLY to your RuneBolt deed address</p>
+            
+            <div class="deposit-info">
+              <div class="info-row">
+                <span>Asset</span>
+                <span>$BILLY (Runes)</span>
+              </div>
+              <div class="info-row">
+                <span>Amount</span>
+                <span id="deposit-amount">100,000,000 BILLY</span>
+              </div>
+              <div class="info-row">
+                <span>Deed Address</span>
+                <code class="deed-addr">bc1qrbolt...xyz789</code>
+              </div>
+              <div class="info-row">
+                <span>Est. Fee</span>
+                <span>~2,500 sats</span>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-full" onclick="deposit()">
+              🐱 Deposit to RuneBolt
+            </button>
+            <p class="step-note">One L1 transaction = unlimited L2 transfers</p>
+          </div>
+        </div>
+
+        <!-- Step 4: Transfer -->
+        <div class="flow-step" id="step-transfer">
+          <div class="step-header">
+            <span class="step-num">4</span>
+            <h3>Transfer</h3>
+          </div>
+          <div class="step-content">
+            <p class="step-desc">Send $BILLY instantly to anyone</p>
+            
+            <div class="runebolt-balance">
+              <span class="balance-label">RuneBolt Balance</span>
+              <span class="balance-value">100,000,000 BILLY</span>
+            </div>
+
+            <div class="transfer-form">
+              <div class="form-group">
+                <label>Recipient Address</label>
+                <input type="text" placeholder="bc1p... or Lightning address" class="input-field">
+              </div>
+              <div class="form-group">
+                <label>Amount</label>
+                <div class="amount-input-group">
+                  <input type="number" class="input-field" placeholder="0.00">
+                  <span class="input-suffix">BILLY</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="transfer-fee">
+              <span>Transfer Fee: 0.1%</span>
+              <span class="fee-amount">~500 sats</span>
+            </div>
+
+            <button class="btn btn-primary btn-full" onclick="transfer()">
+              ⚡ Send Instantly
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 5: Withdraw -->
+        <div class="flow-step" id="step-withdraw">
+          <div class="step-header">
+            <span class="step-num">5</span>
+            <h3>Withdraw</h3>
+          </div>
+          <div class="step-content">
+            <p class="step-desc">Withdraw $BILLY back to L1 anytime</p>
+            
+            <div class="runebolt-balance">
+              <span class="balance-label">Available to Withdraw</span>
+              <span class="balance-value">100,000,000 BILLY</span>
+            </div>
+
+            <div class="withdraw-form">
+              <div class="form-group">
+                <label>Destination Address</label>
+                <input type="text" placeholder="Your Bitcoin address" class="input-field">
+              </div>
+              <div class="form-group">
+                <label>Amount</label>
+                <div class="amount-input-group">
+                  <input type="number" class="input-field" placeholder="0.00">
+                  <span class="input-suffix">BILLY</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="withdraw-fee">
+              <span>Withdrawal Fee</span>
+              <span class="fee-amount">~2,000 sats (L1 miner fee)</span>
+            </div>
+
+            <button class="btn btn-outline btn-full" onclick="withdraw()">
+              🔓 Withdraw to L1
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="logo-icon">⚡</span>
+        <span>RUNEBOLT</span>
+      </div>
+      <p class="footer-text">The Billion Dollar Cat on Lightning ⚡</p>
+    </div>
+  </footer>
+
+  <script>
+    const BILLY_PRICE = 0.0000001; // Mock price in USD
+    
+    function connectWallet() {
+      document.getElementById('step-connect').classList.remove('active');
+      document.getElementById('step-connect').classList.add('completed');
+      document.getElementById('step-amount').classList.add('active');
+    }
+    
+    function setAmount(percent) {
+      const max = 888888888;
+      const amount = Math.floor(max * percent / 100);
+      document.getElementById('billy-amount').value = amount.toLocaleString();
+      updateUsdValue(amount);
+    }
+    
+    document.getElementById('billy-amount')?.addEventListener('input', function(e) {
+      updateUsdValue(parseInt(e.target.value.replace(/,/g, '')) || 0);
+    });
+    
+    function updateUsdValue(amount) {
+      const usd = (amount * BILLY_PRICE).toFixed(4);
+      document.getElementById('usd-value').textContent = '$' + usd;
+      document.getElementById('deposit-amount').textContent = amount.toLocaleString() + ' BILLY';
+    }
+    
+    function goToDeposit() {
+      document.getElementById('step-amount').classList.remove('active');
+      document.getElementById('step-amount').classList.add('completed');
+      document.getElementById('step-deposit').classList.add('active');
+    }
+    
+    function deposit() {
+      document.getElementById('step-deposit').classList.remove('active');
+      document.getElementById('step-deposit').classList.add('completed');
+      document.getElementById('step-transfer').classList.add('active');
+      alert('Deposit transaction submitted! 🐱 Purring to confirmation...');
+    }
+    
+    function transfer() {
+      alert('Transfer complete! Fast as a cat pouncing! ⚡🐱');
+    }
+    
+    function withdraw() {
+      alert('Withdrawal initiated. Landing on L1 like a cat.');
+    }
+  </script>
+</body>
+</html>

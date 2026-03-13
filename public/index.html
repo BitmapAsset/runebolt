@@ -4,79 +4,214 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RuneBolt ⚡ The Lightning Deed Protocol</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    :root {
-      --btc-orange: #F7931A;
-      --btc-gold: #FFD700;
-      --lightning-blue: #00D4FF;
-      --dark-bg: #0a0a0f;
-    }
-    body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: var(--dark-bg);
-      color: #fff;
-      min-height: 100vh;
-    }
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 20px;
-      display: grid;
-      grid-template-columns: 300px 1fr 300px;
-      gap: 30px;
-    }
-    .header {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 40px;
-      background: rgba(10,10,15,0.95);
-      border-radius: 20px;
-      border: 2px solid var(--btc-orange);
-      box-shadow: 0 0 50px rgba(247,147,26,0.3);
-    }
-    .logo {
-      font-size: 4rem;
-      font-weight: 900;
-      background: linear-gradient(135deg, var(--btc-orange), var(--btc-gold));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 60px rgba(247,147,26,0.5);
-    }
-    .main-content {
-      background: rgba(10,10,15,0.95);
-      border-radius: 20px;
-      border: 2px solid var(--lightning-blue);
-      padding: 40px;
-      text-align: center;
-      box-shadow: 0 0 60px rgba(0,212,255,0.2);
-    }
-    .cta-button {
-      background: linear-gradient(135deg, var(--btc-orange), var(--btc-gold));
-      color: #000;
-      font-size: 1.4rem;
-      font-weight: bold;
-      padding: 20px 60px;
-      border: none;
-      border-radius: 50px;
-      cursor: pointer;
-      box-shadow: 0 10px 40px rgba(247,147,26,0.4);
-    }
-    .cta-button:hover {
-      transform: translateY(-3px) scale(1.05);
-    }
-  </style>
+  <link rel="stylesheet" href="runebolt.css">
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <h1 class="logo">⚡ RUNEBOLT</h1>
-      <p>Transfer Bitcoin Assets in &lt;1 Second</p>
-    </header>
-    <div class="main-content">
-      <h2>Lightning Deed Protocol</h2>
-      <button class="cta-button">Start Transfer ⚡</button>
-    </div>
+  <!-- Background Effects -->
+  <div class="gradient-overlay"></div>
+  <div class="particles">
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
   </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <a href="index.html" class="logo">
+        <div class="logo-icon">⚡</div>
+        <span class="logo-text">RUNEBOLT</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="#assets" class="nav-link">Assets</a>
+        <a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#stats" class="nav-link">Stats</a>
+      </nav>
+      <button class="wallet-btn" onclick="connectWallet()">🔗 Connect Wallet</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span>●</span> Non-Custodial • Lightning Fast
+        </div>
+        <h1>Transfer Bitcoin Assets <br><span class="gradient">in &lt;1 Second</span></h1>
+        <p class="hero-subtitle">
+          RuneBolt is the Lightning Deed Protocol. Deposit Bitcoin assets once, then transfer instantly 
+          to anyone, anywhere — no waiting for block confirmations.
+        </p>
+        <div class="hero-cta">
+          <a href="#assets" class="btn btn-primary">Start Transfer ⚡</a>
+          <a href="#how-it-works" class="btn btn-secondary">How It Works</a>
+        </div>
+      </div>
+      
+      <!-- Lightning Nexus Background -->
+      <div class="hero-bg">
+        <object data="assets/lightning-nexus.svg" type="image/svg+xml"></object>
+      </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section id="stats" class="stats">
+      <div class="stat-card">
+        <div class="stat-value">&lt;1s</div>
+        <div class="stat-label">Transfer Time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">0.1%</div>
+        <div class="stat-label">Protocol Fee</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">Non-</div>
+        <div class="stat-label">Custodial</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">L2⚡</div>
+        <div class="stat-label">Lightning Native</div>
+      </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="section">
+      <h2 class="section-title">How It Works</h2>
+      <p class="section-subtitle">Deposit once. Transfer forever.</p>
+      
+      <div class="how-it-works">
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <h3>Connect Wallet</h3>
+            <p>Link your Unisat or Xverse wallet. RuneBolt is non-custodial — you always control your keys.</p>
+            <div class="step-arrow">→</div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <h3>Deposit to RuneBolt</h3>
+            <p>Send your Bitcoin assets to your RuneBolt deed address. One L1 transaction = unlimited L2 transfers.</p>
+            <div class="step-arrow">→</div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <h3>Transfer Instantly</h3>
+            <p>Send assets to any Bitcoin address instantly via Lightning. No block confirmation delays.</p>
+            <div class="step-arrow">→</div>
+          </div>
+          <div class="step">
+            <div class="step-number">4</div>
+            <h3>Withdraw Anytime</h3>
+            <p>Withdraw back to L1 whenever you want. Your assets, your control, always.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Assets Section -->
+    <section id="assets" class="section">
+      <h2 class="section-title">Supported Assets</h2>
+      <p class="section-subtitle">Transfer The Big Four Bitcoin asset classes</p>
+      
+      <div class="assets-grid">
+        <!-- Bitmap -->
+        <a href="bitmap.html" class="asset-card bitmap">
+          <div class="asset-visual">
+            <object data="assets/bitmap-metropolis.svg" type="image/svg+xml"></object>
+          </div>
+          <div class="asset-info">
+            <h3>Bitmap <span class="asset-type">Bitmap</span></h3>
+            <p>Digital land on Bitcoin. Own blocks, build the metaverse.</p>
+            <div class="asset-meta">
+              <span class="asset-stat">Blocks</span>
+              <span class="asset-action">Transfer →</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- $DOG -->
+        <a href="dog.html" class="asset-card dog">
+          <div class="asset-visual">
+            <object data="assets/dog-astronaut.svg" type="image/svg+xml"></object>
+          </div>
+          <div class="asset-info">
+            <h3>$DOG <span class="asset-type">Runes</span></h3>
+            <p>The first and greatest meme coin on Bitcoin. To the moon.</p>
+            <div class="asset-meta">
+              <span class="asset-stat">Fungible</span>
+              <span class="asset-action">Transfer →</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- Billy -->
+        <a href="bdc.html" class="asset-card bdc">
+          <div class="asset-visual">
+            <object data="assets/billy-cat.svg" type="image/svg+xml"></object>
+          </div>
+          <div class="asset-info">
+            <h3>$BILLY <span class="asset-type">Runes</span></h3>
+            <p>Billion Dollar Cat. The silver feline of Bitcoin.</p>
+            <div class="asset-meta">
+              <span class="asset-stat">Fungible</span>
+              <span class="asset-action">Transfer →</span>
+            </div>
+          </div>
+        </a>
+
+        <!-- BRC-20 -->
+        <a href="brc20.html" class="asset-card brc20">
+          <div class="asset-visual">
+            <object data="assets/bitcoin-pepe.svg" type="image/svg+xml"></object>
+          </div>
+          <div class="asset-info">
+            <h3>BRC-20 <span class="asset-type">Tokens</span></h3>
+            <p>Pepe, ORDI, and all BRC-20 tokens. Culture meets code.</p>
+            <div class="asset-meta">
+              <span class="asset-stat">Multi-Token</span>
+              <span class="asset-action">Transfer →</span>
+            </div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="section cta-section">
+      <div class="cta-card">
+        <h2>Ready to Transfer?</h2>
+        <p>Join the Lightning Deed Protocol. Instant Bitcoin asset transfers, non-custodial security.</p>
+        <a href="#assets" class="btn btn-primary">Start Now ⚡</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="logo-icon">⚡</span>
+        <span>RUNEBOLT</span>
+      </div>
+      <p class="footer-text">The Lightning Deed Protocol for Bitcoin Assets</p>
+      <p class="footer-copy">© 2026 RuneBolt. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    function connectWallet() {
+      alert('Connect Wallet: This would integrate with Unisat/Xverse');
+    }
+  </script>
 </body>
 </html>
