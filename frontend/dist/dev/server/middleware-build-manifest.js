@@ -1,0 +1,26 @@
+globalThis.__BUILD_MANIFEST = {
+  "pages": {
+    "/_app": []
+  },
+  "devFiles": [],
+  "polyfillFiles": [
+    "static/chunks/a5967_next_dist_build_polyfills_polyfill-nomodule.js"
+  ],
+  "lowPriorityFiles": [],
+  "rootMainFiles": [
+    "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_9c9d271f._.js",
+    "static/chunks/a5967_next_dist_compiled_react-dom_156228ec._.js",
+    "static/chunks/a5967_next_dist_compiled_react-server-dom-turbopack_ed9a7ded._.js",
+    "static/chunks/a5967_next_dist_compiled_next-devtools_index_7cbf0b3c.js",
+    "static/chunks/a5967_next_dist_compiled_df67ad2c._.js",
+    "static/chunks/a5967_next_dist_client_5f062d95._.js",
+    "static/chunks/a5967_next_dist_4d72cda0._.js",
+    "static/chunks/a5967_@swc_helpers_cjs_ea585755._.js",
+    "static/chunks/_openclaw_workspace_projects_runebolt_frontend_a0ff3932._.js",
+    "static/chunks/turbopack-_openclaw_workspace_projects_runebolt_frontend_ab62f479._.js"
+  ]
+};
+globalThis.__BUILD_MANIFEST.lowPriorityFiles = [
+"/static/" + process.env.__NEXT_BUILD_ID + "/_buildManifest.js",
+"/static/" + process.env.__NEXT_BUILD_ID + "/_ssgManifest.js"
+];

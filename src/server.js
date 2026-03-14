@@ -6,20 +6,72 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 const LndClient = require('./lnd');
 const RuneBoltBridge = require('./bridge');
 const { getAssetBalance, clearAddressCache, verifyAssetOwnership } = require('../dist/indexer');
-const { 
-  createHTLCScript, 
-  buildLockTransaction, 
+const {
+  createHTLCScript,
+  buildLockTransaction,
   buildClaimTransaction,
   buildRefundTransaction,
-  generatePreimage 
+  generatePreimage
 } = require('../dist/wallet/psbt');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+// ── Security Headers ────────────────────────────────────────────
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
+// ── Request Logging ─────────────────────────────────────────────
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// ── Rate Limiting ───────────────────────────────────────────────
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+});
+
+const lightningLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Lightning rate limit exceeded' },
+});
+
+const htlcLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'HTLC rate limit exceeded' },
+});
+
+app.use('/api/', apiLimiter);
+app.use('/api/lightning/', lightningLimiter);
+app.use('/api/bridge/htlc/', htlcLimiter);
+
+// ── CORS & Body Parsing ────────────────────────────────────────
+app.use(cors({
+  origin: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : '*',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+app.use(express.json({ limit: '100kb' }));
 
 // Initialize LND client & bridge
 const lnd = new LndClient(
@@ -429,22 +481,72 @@ app.post('/api/bridge/inventory', (req, res) => {
   res.json(result);
 });
 
-// ── Error Handling ───────────────────────────────────────────────
+// ── 404 Handler ─────────────────────────────────────────────────
+
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found', path: req.path });
+});
+
+// ── Error Handling Middleware ────────────────────────────────────
 
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  const status = err.status || 500;
+  const message = status === 500 ? 'Internal server error' : err.message;
+
+  if (status >= 500) {
+    console.error(`[ERROR] ${req.method} ${req.path}:`, err.stack || err.message);
+  }
+
+  res.status(status).json({
+    error: message,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
+  });
 });
+
+// ── Process-level Error Handlers ────────────────────────────────
+
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
+});
+
+// ── Graceful Shutdown ───────────────────────────────────────────
+
+let server;
+
+function shutdown(signal) {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
+  if (server) {
+    server.close(() => {
+      console.log('Server closed.');
+      process.exit(0);
+    });
+    setTimeout(() => {
+      console.error('Forced shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+  } else {
+    process.exit(0);
+  }
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 // ── Start ────────────────────────────────────────────────────────
 
 const PORT = process.env.RUNEBOLT_PORT || 3141;
 
-app.listen(PORT, () => {
+server = app.listen(PORT, () => {
   console.log(`⚡ RuneBolt Bridge running on port ${PORT}`);
   console.log(`  LND: ${process.env.VOLTAGE_REST_URL}`);
   console.log(`  Fee Rate: ${process.env.RUNEBOLT_FEE_RATE || '0.3%'}`);
-  
+  console.log(`  Rate Limits: API=100/15m, Lightning=20/m, HTLC=10/m`);
+
   // Verify LND connection on startup
   lnd.getInfo().then(info => {
     console.log(`  Node: ${info.alias} (${info.identity_pubkey.slice(0, 12)}...)`);
