@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RuneBolt X Banner — 1500x500</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+
+  .banner {
+    width: 1500px;
+    height: 500px;
+    background: #0a0a0a;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 80px;
+  }
+
+  /* Grid background */
+  .banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(247, 147, 26, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(247, 147, 26, 0.06) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* Radial glow */
+  .banner::after {
+    content: '';
+    position: absolute;
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(247, 147, 26, 0.15) 0%, transparent 70%);
+    top: 50%;
+    left: 30%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .left {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .zap {
+    font-size: 64px;
+    filter: drop-shadow(0 0 20px rgba(247, 147, 26, 0.8));
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { filter: drop-shadow(0 0 20px rgba(247, 147, 26, 0.8)); }
+    50% { filter: drop-shadow(0 0 40px rgba(255, 215, 0, 1)); }
+  }
+
+  .brand-name {
+    font-size: 72px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    background: linear-gradient(135deg, #F7931A, #FFD700);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .tagline {
+    font-size: 28px;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 400;
+    letter-spacing: 1px;
+  }
+
+  .tagline strong {
+    color: #F7931A;
+    font-weight: 600;
+  }
+
+  .sub {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .right {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 20px;
+  }
+
+  .avengers {
+    display: flex;
+    gap: 24px;
+  }
+
+  .avenger {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    position: relative;
+  }
+
+  .avenger.billy { background: rgba(139, 92, 246, 0.2); border-color: rgba(139, 92, 246, 0.4); }
+  .avenger.dog { background: rgba(220, 38, 38, 0.2); border-color: rgba(220, 38, 38, 0.4); }
+  .avenger.bitmap { background: rgba(247, 147, 26, 0.2); border-color: rgba(247, 147, 26, 0.4); }
+  .avenger.pepe { background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); }
+
+  .stats {
+    display: flex;
+    gap: 40px;
+  }
+
+  .stat {
+    text-align: right;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #F7931A;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .built-by {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* Lightning bolts decorative */
+  .bolt {
+    position: absolute;
+    color: rgba(247, 147, 26, 0.1);
+    font-size: 120px;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .bolt-1 { top: 20px; right: 300px; transform: rotate(15deg); }
+  .bolt-2 { bottom: 30px; left: 400px; transform: rotate(-20deg); font-size: 80px; }
+  .bolt-3 { top: 60px; left: 700px; transform: rotate(30deg); font-size: 60px; color: rgba(255, 215, 0, 0.08); }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <!-- Decorative bolts -->
+  <div class="bolt bolt-1">⚡</div>
+  <div class="bolt bolt-2">⚡</div>
+  <div class="bolt bolt-3">⚡</div>
+
+  <div class="left">
+    <div class="logo-row">
+      <span class="zap">⚡</span>
+      <span class="brand-name">RuneBolt</span>
+    </div>
+    <div class="tagline">Instant <strong>Bitcoin Asset</strong> Transfers</div>
+    <div class="sub">Lightning Deed Protocol &middot; Non-Custodial</div>
+  </div>
+
+  <div class="right">
+    <div class="avengers">
+      <div class="avenger billy">🐱</div>
+      <div class="avenger dog">🐕</div>
+      <div class="avenger bitmap">🏙️</div>
+      <div class="avenger pepe">🐸</div>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value">&lt; 1s</div>
+        <div class="stat-label">Transfer</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">1-10 sats</div>
+        <div class="stat-label">Cost</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">0%</div>
+        <div class="stat-label">Custody Risk</div>
+      </div>
+    </div>
+    <div class="built-by">Built by Block Genomics</div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -198,6 +198,37 @@ Out-of-scope:
 - Social engineering attacks
 - Denial-of-service via network flooding (use rate limiting at infrastructure level)
 
+## Bug Bounty Program
+
+RuneBolt operates a responsible disclosure program for security researchers.
+
+### Rewards
+
+| Severity | Payout | Examples |
+|----------|--------|----------|
+| **Critical** | Up to 1 BTC | Preimage leak, fund theft, private key exposure |
+| **High** | Up to 0.5 BTC | HTLC bypass, authentication bypass, swap manipulation |
+| **Medium** | Up to 0.1 BTC | SSRF, input validation bypass, information disclosure |
+| **Low** | Up to 0.01 BTC | Minor info leak, non-exploitable edge cases |
+
+### Rules
+
+1. Test only on testnet — never target mainnet or production systems
+2. Do not disclose publicly until a fix is deployed
+3. Provide a clear proof of concept with reproduction steps
+4. One report per vulnerability
+5. First reporter of a unique vulnerability receives the bounty
+
+### How to Report
+
+Email **security@blockgenomics.io** with:
+- Description and severity assessment
+- Step-by-step reproduction
+- Potential impact
+- Suggested mitigation (optional)
+
+We acknowledge reports within 48 hours and aim to resolve critical issues within 7 days.
+
 ---
 
 *RuneBolt Security Documentation by [Block Genomics](https://blockgenomics.io) | GitHub: [gary-moto](https://github.com/gary-moto)*

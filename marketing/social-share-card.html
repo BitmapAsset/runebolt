@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RuneBolt OG Image — 1200x630</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+
+  .card {
+    width: 1200px;
+    height: 630px;
+    background: linear-gradient(135deg, #0a0a0a 0%, #111111 50%, #0a0a0a 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  /* Radial glow behind logo */
+  .card::before {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(247, 147, 26, 0.2) 0%, transparent 60%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  /* Grid overlay */
+  .card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(247, 147, 26, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(247, 147, 26, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+
+  .zap {
+    font-size: 56px;
+    filter: drop-shadow(0 0 24px rgba(247, 147, 26, 0.9));
+  }
+
+  .brand-name {
+    font-size: 80px;
+    font-weight: 800;
+    letter-spacing: -3px;
+    background: linear-gradient(135deg, #F7931A 20%, #FFD700 80%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .tagline {
+    font-size: 30px;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 300;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+
+  .divider {
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #F7931A, transparent);
+    margin: 4px 0;
+  }
+
+  .features {
+    display: flex;
+    gap: 48px;
+    margin-top: 8px;
+  }
+
+  .feature {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .feature-icon {
+    font-size: 22px;
+  }
+
+  .feature-text {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 500;
+  }
+
+  .avengers-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+  }
+
+  .avenger {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .avenger.billy { background: rgba(139, 92, 246, 0.2); }
+  .avenger.dog { background: rgba(220, 38, 38, 0.2); }
+  .avenger.bitmap { background: rgba(247, 147, 26, 0.2); }
+  .avenger.pepe { background: rgba(16, 185, 129, 0.2); }
+
+  .footer {
+    position: absolute;
+    bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 2;
+  }
+
+  .footer-text {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  /* Corner accents */
+  .corner {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border-color: rgba(247, 147, 26, 0.3);
+    border-style: solid;
+    z-index: 2;
+  }
+  .corner-tl { top: 20px; left: 20px; border-width: 2px 0 0 2px; }
+  .corner-tr { top: 20px; right: 20px; border-width: 2px 2px 0 0; }
+  .corner-bl { bottom: 20px; left: 20px; border-width: 0 0 2px 2px; }
+  .corner-br { bottom: 20px; right: 20px; border-width: 0 2px 2px 0; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+
+  <div class="content">
+    <div class="logo-row">
+      <span class="zap">⚡</span>
+      <span class="brand-name">RuneBolt</span>
+    </div>
+
+    <div class="tagline">Instant Bitcoin Asset Transfers Over Lightning</div>
+
+    <div class="divider"></div>
+
+    <div class="features">
+      <div class="feature">
+        <span class="feature-icon">⚡</span>
+        <span class="feature-text">&lt; 1 Second</span>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🔒</span>
+        <span class="feature-text">Non-Custodial</span>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">💎</span>
+        <span class="feature-text">All Bitcoin Assets</span>
+      </div>
+    </div>
+
+    <div class="avengers-row">
+      <div class="avenger billy">🐱</div>
+      <div class="avenger dog">🐕</div>
+      <div class="avenger bitmap">🏙️</div>
+      <div class="avenger pepe">🐸</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="footer-text">Block Genomics &middot; runebolt.io</span>
+  </div>
+</div>
+
+</body>
+</html>
