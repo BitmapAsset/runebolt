@@ -16,6 +16,13 @@ exports.clearAddressCache = clearAddressCache;
 const axios_1 = __importDefault(require("axios"));
 const UNISAT_API_BASE = 'https://open-api.unisat.io/v1';
 const CACHE_TTL_MS = 30000; // 30 seconds
+// Validate address format to prevent path traversal in URL interpolation
+const SAFE_ADDRESS_REGEX = /^[a-zA-Z0-9]{25,100}$/;
+function validateAddress(address) {
+    if (!address || !SAFE_ADDRESS_REGEX.test(address)) {
+        throw new Error('Invalid address format');
+    }
+}
 const cache = new Map();
 function getCacheKey(address, type) {
     return `${type}:${address}`;
@@ -37,6 +44,7 @@ function setCache(key, data) {
  * Fetch Runes balances for an address
  */
 async function fetchRunesBalances(address, network = 'mainnet') {
+    validateAddress(address);
     const cacheKey = getCacheKey(address, 'runes');
     const cached = getCached(cacheKey);
     if (cached)
@@ -71,6 +79,7 @@ async function fetchRunesBalances(address, network = 'mainnet') {
  * Fetch Ordinals inscriptions for an address
  */
 async function fetchOrdinals(address, network = 'mainnet') {
+    validateAddress(address);
     const cacheKey = getCacheKey(address, 'ordinals');
     const cached = getCached(cacheKey);
     if (cached)
