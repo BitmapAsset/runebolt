@@ -8,6 +8,15 @@ import axios from 'axios';
 const UNISAT_API_BASE = 'https://open-api.unisat.io/v1';
 const CACHE_TTL_MS = 30000; // 30 seconds
 
+// Validate address format to prevent path traversal in URL interpolation
+const SAFE_ADDRESS_REGEX = /^[a-zA-Z0-9]{25,100}$/;
+
+function validateAddress(address: string): void {
+  if (!address || !SAFE_ADDRESS_REGEX.test(address)) {
+    throw new Error('Invalid address format');
+  }
+}
+
 // Simple in-memory cache
 interface CacheEntry<T> {
   data: T;
@@ -79,6 +88,7 @@ export interface AssetBalance {
  * Fetch Runes balances for an address
  */
 export async function fetchRunesBalances(address: string, network: 'mainnet' | 'testnet' = 'mainnet'): Promise<RuneBalance[]> {
+  validateAddress(address);
   const cacheKey = getCacheKey(address, 'runes');
   const cached = getCached<RuneBalance[]>(cacheKey);
   if (cached) return cached;
@@ -119,6 +129,7 @@ export async function fetchRunesBalances(address: string, network: 'mainnet' | '
  * Fetch Ordinals inscriptions for an address
  */
 export async function fetchOrdinals(address: string, network: 'mainnet' | 'testnet' = 'mainnet'): Promise<OrdinalItem[]> {
+  validateAddress(address);
   const cacheKey = getCacheKey(address, 'ordinals');
   const cached = getCached<OrdinalItem[]>(cacheKey);
   if (cached) return cached;

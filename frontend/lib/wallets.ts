@@ -280,15 +280,26 @@ export async function connectWallet(type: WalletType): Promise<WalletConnection>
   }
 }
 
-// Disconnect wallet (mainly removes event listeners)
-export function disconnectWallet(type: WalletType, callback?: (data: any) => void): void {
+// Disconnect wallet (removes all RuneBolt event listeners)
+export function disconnectWallet(type: WalletType): void {
   if (typeof window === 'undefined') return;
 
-  if (type === 'unisat' && window.unisat && callback) {
-    window.unisat.removeListener('accountsChanged', callback);
-    window.unisat.removeListener('networkChanged', callback);
+  if (type === 'unisat' && window.unisat) {
+    // Remove all listeners we may have registered
+    for (const cb of _registeredListeners) {
+      try {
+        window.unisat.removeListener('accountsChanged', cb);
+        window.unisat.removeListener('networkChanged', cb);
+      } catch {
+        // Listener may not exist, safe to ignore
+      }
+    }
+    _registeredListeners.clear();
   }
 }
+
+// Track registered listeners so we can clean them up on disconnect
+const _registeredListeners = new Set<(data: any) => void>();
 
 // Sign PSBT with connected wallet
 export async function signPsbt(
@@ -409,7 +420,11 @@ export function onAccountsChanged(
 
   if (walletType === 'unisat' && window.unisat) {
     window.unisat.on('accountsChanged', callback);
-    return () => window.unisat?.removeListener('accountsChanged', callback);
+    _registeredListeners.add(callback);
+    return () => {
+      window.unisat?.removeListener('accountsChanged', callback);
+      _registeredListeners.delete(callback);
+    };
   }
 
   return () => {};
@@ -424,8 +439,30 @@ export function onNetworkChanged(
 
   if (walletType === 'unisat' && window.unisat) {
     window.unisat.on('networkChanged', callback);
-    return () => window.unisat?.removeListener('networkChanged', callback);
+    _registeredListeners.add(callback);
+    return () => {
+      window.unisat?.removeListener('networkChanged', callback);
+      _registeredListeners.delete(callback);
+    };
   }
 
   return () => {};
+}
+
+// Validate that a stored wallet connection has valid structure and the wallet is installed
+export function validateConnection(conn: unknown): conn is WalletConnection {
+  if (!conn || typeof conn !== 'object') return false;
+  const c = conn as Record<string, unknown>;
+
+  const validWallets: WalletType[] = ['unisat', 'xverse', 'leather', 'okx'];
+  if (!validWallets.includes(c.wallet as WalletType)) return false;
+
+  const validNetworks = ['mainnet', 'testnet', 'regtest'];
+  if (!validNetworks.includes(c.network as string)) return false;
+
+  const account = c.account as Record<string, unknown> | undefined;
+  if (!account || typeof account.address !== 'string' || typeof account.publicKey !== 'string') return false;
+  if (!/^[a-zA-Z0-9]{25,100}$/.test(account.address)) return false;
+
+  return isWalletInstalled(c.wallet as WalletType);
 }

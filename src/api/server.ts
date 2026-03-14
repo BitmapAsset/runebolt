@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
+import rateLimit from 'express-rate-limit';
 import { RuneBolt } from '../core/RuneBolt';
 import { createRouter, errorHandler } from './routes';
 import { setupWebSocket } from './websocket';
@@ -15,15 +16,49 @@ async function main(): Promise<void> {
 
   const app = express();
 
-  app.use(cors({ origin: config.server.corsOrigins }));
+  // Trust proxy if behind reverse proxy
+  app.set('trust proxy', 1);
+
+  app.use(cors({ origin: config.server.corsOrigins, credentials: false }));
   app.use(express.json({ limit: '100kb' }));
   app.disable('x-powered-by');
+
+  // Global rate limit: 100 requests per minute per IP
+  app.use(rateLimit({
+    windowMs: 60_000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again later' },
+  }));
+
+  // Strict rate limit for sensitive endpoints
+  const sensitiveRateLimit = rateLimit({
+    windowMs: 60_000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many attempts, please try again later' },
+  });
+  app.use('/api/v1/wallet/unlock', sensitiveRateLimit);
+  app.use('/api/v1/send', sensitiveRateLimit);
+  app.use('/api/v1/wrap', sensitiveRateLimit);
+  app.use('/api/v1/unwrap', sensitiveRateLimit);
+  app.use('/api/v1/channels/open', sensitiveRateLimit);
+  app.use('/api/v1/channels/close', sensitiveRateLimit);
 
   // Security headers
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '0');
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none';"
+    );
     next();
   });
 

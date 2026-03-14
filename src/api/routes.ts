@@ -1,8 +1,22 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { RuneBolt } from '../core/RuneBolt';
 import { RuneBoltError } from '../utils/errors';
 import { WrapRequestSchema, UnwrapRequestSchema, SendAssetSchema, OpenChannelSchema } from '../types';
 import { InputValidator } from '../security';
+
+const ReceiveSchema = z.object({
+  assetId: z.string().min(1).max(200),
+  amount: z.union([z.string(), z.number()]).refine(
+    (val) => { const n = typeof val === 'string' ? parseInt(val, 10) : val; return Number.isFinite(n) && n > 0; },
+    { message: 'amount must be a positive number' }
+  ),
+  memo: z.string().max(256).regex(/^[\x20-\x7E]*$/, 'memo contains invalid characters').optional().default(''),
+});
+
+const CloseChannelSchema = z.object({
+  channelId: z.string().min(1).max(200).regex(/^[a-zA-Z0-9:_-]+$/, 'Invalid channel ID format'),
+});
 
 export function createRouter(bolt: RuneBolt): Router {
   const router = Router();
@@ -28,8 +42,8 @@ export function createRouter(bolt: RuneBolt): Router {
   router.post('/wallet/unlock', async (req, res, next) => {
     try {
       const { password } = req.body;
-      if (!password || typeof password !== 'string') {
-        res.status(400).json({ error: 'Password required' });
+      if (!password || typeof password !== 'string' || password.length > 1024) {
+        res.status(400).json({ error: 'Password required (max 1024 characters)' });
         return;
       }
       const info = await bolt.unlock(password);
@@ -131,12 +145,14 @@ export function createRouter(bolt: RuneBolt): Router {
   // Create invoice
   router.post('/receive', async (req, res, next) => {
     try {
-      const { assetId, amount, memo } = req.body;
-      if (!assetId || !amount) {
-        res.status(400).json({ error: 'assetId and amount required' });
+      const validation = InputValidator.validateSchema(ReceiveSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({ error: validation.error });
         return;
       }
-      const invoice = await bolt.createInvoice(assetId, BigInt(amount), memo || '');
+      const { assetId, amount, memo } = validation.data;
+      const sanitizedMemo = InputValidator.sanitizeString(memo || '', 256);
+      const invoice = await bolt.createInvoice(assetId, BigInt(amount), sanitizedMemo);
       res.json({
         paymentRequest: invoice.paymentRequest,
         paymentHash: invoice.paymentHash,
@@ -171,11 +187,12 @@ export function createRouter(bolt: RuneBolt): Router {
 
   router.post('/channels/close', async (req, res, next) => {
     try {
-      const { channelId } = req.body;
-      if (!channelId) {
-        res.status(400).json({ error: 'channelId required' });
+      const validation = InputValidator.validateSchema(CloseChannelSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({ error: validation.error });
         return;
       }
+      const { channelId } = validation.data;
       await bolt.closeChannel(channelId);
       res.json({ status: 'closed', channelId });
     } catch (err) { next(err); }
@@ -216,7 +233,6 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
     res.status(err.statusCode).json({
       error: err.message,
       code: err.code,
-      details: err.details,
     });
   } else {
     res.status(500).json({ error: 'Internal server error' });

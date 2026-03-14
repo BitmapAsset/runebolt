@@ -3,7 +3,9 @@
  * Frontend API integration for RuneBolt backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_RUNEBOLT_API_URL || 'http://64.23.226.113:3141';
+// When deployed on Vercel, leave empty to use relative paths with Vercel rewrites.
+// For local dev or direct deployment, set NEXT_PUBLIC_RUNEBOLT_API_URL.
+const API_BASE_URL = process.env.NEXT_PUBLIC_RUNEBOLT_API_URL || '';
 
 // Types
 export interface AssetBalance {
