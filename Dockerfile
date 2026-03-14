@@ -28,7 +28,7 @@ COPY --from=build /app/dist ./dist
 
 ENV NODE_ENV=production
 
-EXPOSE 3000
+EXPOSE 3141
 
 USER node
 

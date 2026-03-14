@@ -3,3 +3,6 @@ node_modules/
 !.env.example
 *.log
 .vercel
+.next/
+frontend/dist/
+frontend/.next/

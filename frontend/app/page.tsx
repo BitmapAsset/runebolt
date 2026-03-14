@@ -1,38 +1,180 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap,
   Wallet,
   ArrowRightLeft,
-  History,
   Shield,
   Clock,
   Bitcoin,
   ChevronRight,
-  Copy,
-  Check,
   ExternalLink,
   AlertCircle,
 } from "lucide-react";
 import { cn, truncateAddress } from "@/lib/utils";
 import { AssetDashboard } from "./components/AssetDashboard";
-import { connectWallet, disconnectWallet, getWallets, type WalletConnection, type WalletInfo } from "@/lib/wallets";
+import { connectWallet, disconnectWallet, getWallets, validateConnection, type WalletConnection, type WalletInfo } from "@/lib/wallets";
 import { getNodeInfo } from "@/lib/api";
 
-// Import new visual effect components
-import { LightningEffects, ConnectLightning, TransferLightning, SuccessLightning, SoundWaveVisualizer } from "./components/LightningEffects";
-import { ParticleSystem, ConfettiExplosion, SparkBurst, FloatingRunes } from "./components/ParticleSystem";
-import { GlitchText, BillyText, DogText, BitmapText, PepeText, GlitchCounter, SuccessText, ConnectedText } from "./components/GlitchText";
-import { AssetCard3D, StatCard3D } from "./components/AssetCard3D";
-import { EnergyBackground, HeroBackground, AssetSectionBackground } from "./components/EnergyBackground";
+// Eagerly load lightweight text components
+import { GlitchText, ConnectedText } from "./components/GlitchText";
+import { StatCard3D } from "./components/AssetCard3D";
+
+// Lazy load heavy visual effect components to reduce initial bundle
+const LightningEffects = lazy(() => import("./components/LightningEffects").then(m => ({ default: m.LightningEffects })));
+const ConnectLightning = lazy(() => import("./components/LightningEffects").then(m => ({ default: m.ConnectLightning })));
+const TransferLightning = lazy(() => import("./components/LightningEffects").then(m => ({ default: m.TransferLightning })));
+const SuccessLightning = lazy(() => import("./components/LightningEffects").then(m => ({ default: m.SuccessLightning })));
+const ParticleSystem = lazy(() => import("./components/ParticleSystem").then(m => ({ default: m.ParticleSystem })));
+const ConfettiExplosion = lazy(() => import("./components/ParticleSystem").then(m => ({ default: m.ConfettiExplosion })));
+const FloatingRunes = lazy(() => import("./components/ParticleSystem").then(m => ({ default: m.FloatingRunes })));
+const EnergyBackground = lazy(() => import("./components/EnergyBackground").then(m => ({ default: m.EnergyBackground })));
+const HeroBackground = lazy(() => import("./components/EnergyBackground").then(m => ({ default: m.HeroBackground })));
+const AssetSectionBackground = lazy(() => import("./components/EnergyBackground").then(m => ({ default: m.AssetSectionBackground })));
 
 const fadeIn = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } };
 const staggerContainer = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
 };
+
+// Scroll progress bar
+function ScrollProgress() {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(totalHeight > 0 ? (window.scrollY / totalHeight) * 100 : 0);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <motion.div
+      className="fixed top-0 left-0 right-0 h-[2px] z-[60] origin-left"
+      style={{
+        scaleX: progress / 100,
+        background: "linear-gradient(90deg, #F7931A, #FFD700, #F7931A)",
+        boxShadow: "0 0 10px rgba(247, 147, 26, 0.8)",
+      }}
+    />
+  );
+}
+
+// Konami code easter egg
+function useKonamiCode(callback: () => void) {
+  useEffect(() => {
+    const code = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
+    let index = 0;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === code[index]) {
+        index++;
+        if (index === code.length) {
+          callback();
+          index = 0;
+        }
+      } else {
+        index = 0;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [callback]);
+}
+
+// Easter egg overlay
+function EasterEgg({ active, onDone }: { active: boolean; onDone: () => void }) {
+  useEffect(() => {
+    if (active) {
+      const t = setTimeout(onDone, 4000);
+      return () => clearTimeout(t);
+    }
+  }, [active, onDone]);
+
+  return (
+    <AnimatePresence>
+      {active && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none"
+        >
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            exit={{ scale: 0, rotate: 180 }}
+            transition={{ type: "spring", stiffness: 200 }}
+            className="text-center"
+          >
+            <div className="text-8xl mb-4">&#x26A1;</div>
+            <motion.p
+              className="text-3xl font-bold bitcoin-gradient"
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 0.5, repeat: Infinity }}
+            >
+              SATOSHI MODE ACTIVATED
+            </motion.p>
+            <p className="text-gray-400 mt-2">You found the secret. You are the chosen one.</p>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// Logo click counter easter egg
+function useBoltClicks() {
+  const [clicks, setClicks] = useState(0);
+  const [showMessage, setShowMessage] = useState(false);
+
+  const handleClick = useCallback(() => {
+    setClicks(c => {
+      const next = c + 1;
+      if (next === 7) {
+        setShowMessage(true);
+        setTimeout(() => setShowMessage(false), 3000);
+        return 0;
+      }
+      return next;
+    });
+  }, []);
+
+  return { handleClick, showMessage };
+}
+
+// Back to top button
+function BackToTop() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setVisible(window.scrollY > 500);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.5 }}
+          whileHover={{ scale: 1.1, boxShadow: "0 0 20px rgba(247, 147, 26, 0.5)" }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-8 right-8 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-[#F7931A] to-[#FFD700] flex items-center justify-center shadow-lg"
+        >
+          <ChevronRight className="w-5 h-5 text-black rotate-[-90deg]" />
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+}
 
 // Asset sections data
 const ASSETS = [
@@ -42,7 +184,7 @@ const ASSETS = [
     fullName: "Billion Dollar Cat",
     description: "The purple lightning of feline finance. Every transaction leaves paw prints.",
     color: "#8B5CF6",
-    emoji: "🐱",
+    emoji: "\uD83D\uDC31",
     stats: { holders: "12.5K", volume: "$2.4M", price: "$0.0042" },
   },
   {
@@ -51,7 +193,7 @@ const ASSETS = [
     fullName: "Doggotothemoon",
     description: "Much wow. Very red. Such lightning. The original meme on Bitcoin.",
     color: "#DC2626",
-    emoji: "🐕",
+    emoji: "\uD83D\uDC15",
     stats: { holders: "45.2K", volume: "$8.1M", price: "$0.0088" },
   },
   {
@@ -60,7 +202,7 @@ const ASSETS = [
     fullName: "Bitmap Protocol",
     description: "Own your piece of Bitcoin history. Block by block, the metaverse unfolds.",
     color: "#F7931A",
-    emoji: "🏙️",
+    emoji: "\uD83C\uDFD9\uFE0F",
     stats: { holders: "28.9K", volume: "$5.6M", price: "$0.015" },
   },
   {
@@ -69,24 +211,34 @@ const ASSETS = [
     fullName: "Rare Pepe",
     description: "Feels good man. The green lightning of meme magic on Bitcoin.",
     color: "#10B981",
-    emoji: "🐸",
+    emoji: "\uD83D\uDC38",
     stats: { holders: "33.7K", volume: "$6.9M", price: "$0.0012" },
   },
 ];
 
-function Navbar({ connected, address, onConnect, network }: { 
+function Navbar({ connected, address, onConnect, network, onLogoClick, logoMessage }: {
   connected: boolean; address?: string; onConnect: () => void; network?: string;
+  onLogoClick?: () => void; logoMessage?: boolean;
 }) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(() => {
+          setScrolled(window.scrollY > 50);
+          ticking = false;
+        });
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
-    <motion.nav 
+    <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -95,13 +247,28 @@ function Navbar({ connected, address, onConnect, network }: {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <motion.div 
-            className="flex items-center gap-2"
+          <motion.div
+            className="flex items-center gap-2 cursor-pointer select-none relative"
             whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onLogoClick}
           >
-            <motion.div 
+            {/* Logo click easter egg tooltip */}
+            <AnimatePresence>
+              {logoMessage && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                  animate={{ opacity: 1, y: -40, scale: 1 }}
+                  exit={{ opacity: 0, y: -60, scale: 0.5 }}
+                  className="absolute left-0 whitespace-nowrap text-xs px-3 py-1 rounded-full bg-[#F7931A]/20 text-[#F7931A] border border-[#F7931A]/30"
+                >
+                  Keep clicking... you&apos;re onto something
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <motion.div
               className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#F7931A] to-[#FFD700] flex items-center justify-center"
-              animate={{ 
+              animate={{
                 boxShadow: [
                   "0 0 10px rgba(247, 147, 26, 0.5)",
                   "0 0 30px rgba(247, 147, 26, 0.8)",
@@ -114,9 +281,9 @@ function Navbar({ connected, address, onConnect, network }: {
             </motion.div>
             <GlitchText text="RuneBolt" className="text-xl font-bold bitcoin-gradient" variant="electric" size="lg" />
           </motion.div>
-          
+
           <div className="hidden md:flex items-center gap-6">
-            {["Features", "How it Works", "Assets", "Transfer"].map((item, i) => (
+            {["Features", "How it Works", "Assets", "Transfer"].map((item) => (
               <motion.a
                 key={item}
                 href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
@@ -138,9 +305,9 @@ function Navbar({ connected, address, onConnect, network }: {
             <AnimatePresence>
               {connected && <ConnectedText active={connected} />}
             </AnimatePresence>
-            
+
             {network === 'testnet' && (
-              <motion.span 
+              <motion.span
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
@@ -148,8 +315,8 @@ function Navbar({ connected, address, onConnect, network }: {
                 Testnet
               </motion.span>
             )}
-            <motion.button 
-              onClick={onConnect} 
+            <motion.button
+              onClick={onConnect}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={cn(
@@ -168,16 +335,16 @@ function Navbar({ connected, address, onConnect, network }: {
 }
 
 function Hero({ onConnect }: { onConnect: () => void }) {
-  const [showConnectedText, setShowConnectedText] = useState(false);
-
   return (
     <section className="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden">
-      <HeroBackground />
-      <FloatingRunes asset="bitmap" />
-      
+      <Suspense fallback={null}>
+        <HeroBackground />
+        <FloatingRunes asset="bitmap" />
+      </Suspense>
+
       <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="relative z-10 max-w-5xl mx-auto px-4 text-center">
-        <motion.div 
-          variants={fadeIn} 
+        <motion.div
+          variants={fadeIn}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F7931A]/10 border border-[#F7931A]/20 mb-8"
           whileHover={{ scale: 1.05, borderColor: "rgba(247, 147, 26, 0.5)" }}
         >
@@ -202,20 +369,26 @@ function Hero({ onConnect }: { onConnect: () => void }) {
         </motion.p>
 
         <motion.div variants={fadeIn} className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-          <motion.button 
-            onClick={onConnect} 
-            className="btn-primary flex items-center justify-center gap-2 text-lg px-8 py-4"
+          <motion.button
+            onClick={onConnect}
+            className="btn-primary flex items-center justify-center gap-2 text-lg px-8 py-4 relative overflow-hidden"
             whileHover={{ scale: 1.05, boxShadow: "0 0 40px rgba(247, 147, 26, 0.6)" }}
             whileTap={{ scale: 0.95 }}
           >
-            <Wallet className="w-5 h-5" />
-            Connect Wallet
-            <ChevronRight className="w-5 h-5" />
+            {/* Sweeping shine on hero CTA */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+              animate={{ x: ["-200%", "200%"] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
+            />
+            <Wallet className="w-5 h-5 relative z-10" />
+            <span className="relative z-10">Connect Wallet</span>
+            <ChevronRight className="w-5 h-5 relative z-10" />
           </motion.button>
-          <motion.a 
-            href="https://docs.runebolt.io" 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <motion.a
+            href="https://docs.runebolt.io"
+            target="_blank"
+            rel="noopener noreferrer"
             className="btn-secondary flex items-center justify-center gap-2 text-lg px-8 py-4"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -249,13 +422,12 @@ function Features() {
   const features = [
     { icon: Zap, title: "Lightning Fast", description: "Transfer any Bitcoin asset in milliseconds. The deed travels at Lightning speed." },
     { icon: Shield, title: "Non-Custodial", description: "Your assets, your keys. RuneBolt never holds your Bitcoin. Smart contracts enforce everything." },
-    { icon: ArrowRightLeft, title: "Universal Assets", description: "Runes, Ordinals, Bitmap, BRC-20 — if it's on Bitcoin, you can transfer it instantly." },
+    { icon: ArrowRightLeft, title: "Universal Assets", description: "Runes, Ordinals, Bitmap, BRC-20 \u2014 if it\u2019s on Bitcoin, you can transfer it instantly." },
   ];
 
   return (
-    <section id="features" className="py-24 relative">
-      <EnergyBackground variant="bitmap" intensity="low" />
-      
+    <section id="features" className="py-24 relative" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 600px" }}>
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="text-center mb-16">
           <motion.h2 variants={fadeIn} className="text-3xl sm:text-4xl font-bold mb-4">
@@ -267,17 +439,17 @@ function Features() {
         </motion.div>
 
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {features.map((feature, i) => (
-            <motion.div 
-              key={feature.title} 
-              variants={fadeIn} 
+          {features.map((feature) => (
+            <motion.div
+              key={feature.title}
+              variants={fadeIn}
               className="card group relative overflow-hidden"
               whileHover={{ y: -10, transition: { duration: 0.3 } }}
             >
-              <motion.div 
+              <motion.div
                 className="w-12 h-12 rounded-xl bg-[#F7931A]/10 flex items-center justify-center mb-4"
-                whileHover={{ 
-                  scale: 1.1, 
+                whileHover={{
+                  scale: 1.1,
                   rotate: 5,
                   backgroundColor: "rgba(247, 147, 26, 0.2)",
                 }}
@@ -286,7 +458,7 @@ function Features() {
               </motion.div>
               <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
               <p className="text-gray-400">{feature.description}</p>
-              
+
               {/* Hover glow effect */}
               <motion.div
                 className="absolute inset-0 rounded-2xl pointer-events-none"
@@ -312,9 +484,8 @@ function HowItWorks() {
   ];
 
   return (
-    <section id="how-it-works" className="py-24 bg-black/50 relative">
-      <EnergyBackground variant="bitmap" intensity="low" />
-      
+    <section id="how-it-works" className="py-24 bg-black/50 relative" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 600px" }}>
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="text-center mb-16">
           <motion.h2 variants={fadeIn} className="text-3xl sm:text-4xl font-bold mb-4">
@@ -328,16 +499,16 @@ function HowItWorks() {
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {steps.map((step, index) => (
             <motion.div key={step.number} variants={fadeIn} className="relative">
-              <motion.div 
+              <motion.div
                 className="card h-full group"
-                whileHover={{ 
+                whileHover={{
                   y: -5,
                   boxShadow: "0 20px 40px rgba(247, 147, 26, 0.2)",
                 }}
               >
-                <motion.div 
+                <motion.div
                   className="text-5xl font-bold mb-4"
-                  style={{ 
+                  style={{
                     background: "linear-gradient(135deg, #F7931A, #FFD700)",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
@@ -350,7 +521,7 @@ function HowItWorks() {
                 <p className="text-gray-400">{step.description}</p>
               </motion.div>
               {index < steps.length - 1 && (
-                <motion.div 
+                <motion.div
                   className="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2 z-10"
                   animate={{ x: [0, 5, 0] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
@@ -368,13 +539,13 @@ function HowItWorks() {
 
 function AssetShowcase() {
   return (
-    <section id="assets" className="py-24 relative">
+    <section id="assets" className="py-24 relative" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 800px" }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div 
-          initial="hidden" 
-          whileInView="visible" 
-          viewport={{ once: true }} 
-          variants={staggerContainer} 
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={staggerContainer}
           className="text-center mb-16"
         >
           <motion.h2 variants={fadeIn} className="text-3xl sm:text-4xl font-bold mb-4">
@@ -397,7 +568,7 @@ function AssetShowcase() {
 
 function AssetSection({ asset, index }: { asset: typeof ASSETS[0]; index: number }) {
   const isEven = index % 2 === 0;
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, x: isEven ? -50 : 50 }}
@@ -406,11 +577,13 @@ function AssetSection({ asset, index }: { asset: typeof ASSETS[0]; index: number
       transition={{ duration: 0.6 }}
       className="relative py-12"
     >
-      <AssetSectionBackground asset={asset.id as any} />
-      
+      <Suspense fallback={null}>
+        <AssetSectionBackground asset={asset.id as any} />
+      </Suspense>
+
       <div className={`relative z-10 flex flex-col ${isEven ? 'lg:flex-row' : 'lg:flex-row-reverse'} items-center gap-12`}>
         {/* Visual Side */}
-        <motion.div 
+        <motion.div
           className="flex-1 relative"
           whileHover={{ scale: 1.02 }}
         >
@@ -428,7 +601,7 @@ function AssetSection({ asset, index }: { asset: typeof ASSETS[0]; index: number
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           >
             {asset.emoji}
-            
+
             {/* Orbiting particles */}
             {[...Array(3)].map((_, i) => (
               <motion.div
@@ -458,7 +631,7 @@ function AssetSection({ asset, index }: { asset: typeof ASSETS[0]; index: number
             ))}
           </motion.div>
         </motion.div>
-        
+
         {/* Info Side */}
         <div className="flex-1 text-center lg:text-left">
           <motion.div
@@ -467,7 +640,7 @@ function AssetSection({ asset, index }: { asset: typeof ASSETS[0]; index: number
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
           >
-            <h3 
+            <h3
               className="text-4xl font-bold mb-2"
               style={{ color: asset.color }}
             >
@@ -475,7 +648,7 @@ function AssetSection({ asset, index }: { asset: typeof ASSETS[0]; index: number
             </h3>
             <p className="text-gray-400 mb-4">{asset.fullName}</p>
             <p className="text-gray-300 mb-8 text-lg">{asset.description}</p>
-            
+
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
               {Object.entries(asset.stats).map(([key, value]) => (
@@ -486,7 +659,7 @@ function AssetSection({ asset, index }: { asset: typeof ASSETS[0]; index: number
                     backgroundColor: `${asset.color}10`,
                     border: `1px solid ${asset.color}20`,
                   }}
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.05,
                     boxShadow: `0 0 20px ${asset.color}30`,
                   }}
@@ -505,7 +678,7 @@ function AssetSection({ asset, index }: { asset: typeof ASSETS[0]; index: number
   );
 }
 
-function WalletModal({ isOpen, onClose, onConnect }: { 
+function WalletModal({ isOpen, onClose, onConnect }: {
   isOpen: boolean; onClose: () => void; onConnect: (wallet: string) => void;
 }) {
   const [wallets, setWallets] = useState<WalletInfo[]>([]);
@@ -543,9 +716,10 @@ function WalletModal({ isOpen, onClose, onConnect }: {
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
             className="card w-full max-w-md relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
@@ -561,16 +735,23 @@ function WalletModal({ isOpen, onClose, onConnect }: {
               }}
               transition={{ duration: 2, repeat: Infinity }}
             />
-            
+
             <div className="flex items-center justify-between mb-6 relative z-10">
               <h2 className="text-xl font-bold">
                 <GlitchText text="Connect Wallet" variant="electric" />
               </h2>
-              <button onClick={onClose} className="text-gray-400 hover:text-white">✕</button>
+              <motion.button
+                onClick={onClose}
+                whileHover={{ scale: 1.2, rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
+                className="text-gray-400 hover:text-white transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10"
+              >
+                &#x2715;
+              </motion.button>
             </div>
 
             {error && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-sm flex items-center gap-2"
@@ -589,26 +770,32 @@ function WalletModal({ isOpen, onClose, onConnect }: {
                   transition={{ delay: i * 0.1 }}
                   onClick={() => handleConnect(wallet.id)}
                   disabled={connecting === wallet.id || !wallet.installed}
-                  whileHover={wallet.installed ? { 
-                    scale: 1.02, 
+                  whileHover={wallet.installed ? {
+                    scale: 1.02,
                     x: 5,
                     boxShadow: "0 0 30px rgba(247, 147, 26, 0.3)",
                   } : {}}
                   whileTap={wallet.installed ? { scale: 0.98 } : {}}
                   className={cn(
                     "w-full flex items-center gap-4 p-4 rounded-xl border transition-all",
-                    wallet.installed 
-                      ? "bg-white/5 hover:bg-white/10 border-white/10 hover:border-[#F7931A]/50" 
+                    wallet.installed
+                      ? "bg-white/5 hover:bg-white/10 border-white/10 hover:border-[#F7931A]/50"
                       : "bg-white/5 opacity-50 cursor-not-allowed border-white/5"
                   )}
                 >
-                  <span className="text-2xl">{wallet.icon}</span>
+                  <motion.span
+                    className="text-2xl"
+                    animate={connecting === wallet.id ? { rotate: [0, 10, -10, 0] } : {}}
+                    transition={connecting === wallet.id ? { duration: 0.5, repeat: Infinity } : {}}
+                  >
+                    {wallet.icon}
+                  </motion.span>
                   <div className="flex-1 text-left">
                     <div className="font-medium">{wallet.name}</div>
                     <div className="text-sm text-gray-500">{wallet.description}</div>
                   </div>
                   {connecting === wallet.id ? (
-                    <motion.span 
+                    <motion.span
                       className="text-xs px-2 py-1 rounded-full bg-[#F7931A]/20 text-[#F7931A]"
                       animate={{ opacity: [1, 0.5, 1] }}
                       transition={{ duration: 1, repeat: Infinity }}
@@ -618,10 +805,10 @@ function WalletModal({ isOpen, onClose, onConnect }: {
                   ) : wallet.installed ? (
                     <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">Installed</span>
                   ) : (
-                    <a 
-                      href={wallet.website} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
+                    <a
+                      href={wallet.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-xs px-2 py-1 rounded-full bg-gray-500/20 text-gray-400 hover:bg-gray-500/30"
                     >
                       Install
@@ -647,7 +834,7 @@ export default function Home() {
   const [connection, setConnection] = useState<WalletConnection | null>(null);
   const [network, setNetwork] = useState<'mainnet' | 'testnet'>('testnet');
   const [nodeStatus, setNodeStatus] = useState<any>(null);
-  
+
   // Visual effect triggers
   const [connectLightning, setConnectLightning] = useState(false);
   const [transferLightning, setTransferLightning] = useState(false);
@@ -656,16 +843,30 @@ export default function Home() {
   const [confettiActive, setConfettiActive] = useState(false);
   const [connectedTextActive, setConnectedTextActive] = useState(false);
 
+  // Easter eggs
+  const [easterEggActive, setEasterEggActive] = useState(false);
+  const { handleClick: handleLogoClick, showMessage: logoMessage } = useBoltClicks();
+
+  useKonamiCode(useCallback(() => {
+    setEasterEggActive(true);
+    setConfettiActive(true);
+    setTimeout(() => setConfettiActive(false), 3000);
+  }, []));
+
   // Check for existing connection on mount
   useEffect(() => {
     const saved = localStorage.getItem('runebolt-connection');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setConnection(parsed);
-        setConnected(true);
-        setNetwork(parsed.network === 'mainnet' ? 'mainnet' : 'testnet');
-      } catch (e) {
+        if (parsed.wallet && parsed.account?.address && validateConnection(parsed)) {
+          setConnection(parsed);
+          setConnected(true);
+          setNetwork(parsed.network === 'mainnet' ? 'mainnet' : 'testnet');
+        } else {
+          localStorage.removeItem('runebolt-connection');
+        }
+      } catch {
         localStorage.removeItem('runebolt-connection');
       }
     }
@@ -679,17 +880,16 @@ export default function Home() {
   }, []);
 
   const handleWalletSelect = useCallback(async (walletType: string) => {
-    // Trigger connect effects
-    setConnectLightning(true);
-    setTimeout(() => setConnectLightning(false), 800);
-    
+    // Connect first, then trigger effects only on success
     const conn = await connectWallet(walletType as any);
     setConnection(conn);
     setConnected(true);
     setNetwork(conn.network === 'mainnet' ? 'mainnet' : 'testnet');
     localStorage.setItem('runebolt-connection', JSON.stringify(conn));
-    
-    // Trigger success effects
+
+    // Trigger visual effects after successful connection
+    setConnectLightning(true);
+    setTimeout(() => setConnectLightning(false), 800);
     setTimeout(() => {
       setConnectedTextActive(true);
       setParticleTrigger("bitmap");
@@ -713,29 +913,40 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-black relative">
-      {/* Global Background Effects */}
-      <EnergyBackground variant="bitmap" intensity="low" />
-      
-      {/* Visual Effect Overlays */}
-      <LightningEffects autoTrigger intensity="low" />
-      <ConnectLightning active={connectLightning} />
-      <TransferLightning active={transferLightning} asset="bitmap" />
-      <SuccessLightning active={successLightning} asset="bitmap" />
-      <ParticleSystem trigger={particleTrigger} asset="bitmap" intensity="high" />
-      <ConfettiExplosion active={confettiActive} asset="bitmap" />
-      
-      <Navbar 
-        connected={connected} 
-        address={connection?.account.address} 
+      {/* Scroll progress bar */}
+      <ScrollProgress />
+
+      {/* Easter egg overlays */}
+      <EasterEgg active={easterEggActive} onDone={useCallback(() => setEasterEggActive(false), [])} />
+
+      {/* Back to top button */}
+      <BackToTop />
+
+      {/* Lazy-loaded visual effects */}
+      <Suspense fallback={null}>
+        <EnergyBackground variant="bitmap" intensity="low" />
+        <LightningEffects autoTrigger intensity="low" />
+        <ConnectLightning active={connectLightning} />
+        <TransferLightning active={transferLightning} asset="bitmap" />
+        <SuccessLightning active={successLightning} asset="bitmap" />
+        <ParticleSystem trigger={particleTrigger} asset="bitmap" intensity="high" />
+        <ConfettiExplosion active={confettiActive} asset="bitmap" />
+      </Suspense>
+
+      <Navbar
+        connected={connected}
+        address={connection?.account.address}
         onConnect={handleConnect}
         network={network}
+        onLogoClick={handleLogoClick}
+        logoMessage={logoMessage}
       />
       <Hero onConnect={handleConnect} />
       <Features />
       <HowItWorks />
       <AssetShowcase />
-      
-      <section id="transfer" className="py-24 relative">
+
+      <section id="transfer" className="py-24 relative" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 600px" }}>
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <motion.div
             initial="hidden"
@@ -758,7 +969,7 @@ export default function Home() {
             viewport={{ once: true }}
             variants={fadeIn}
           >
-            <AssetDashboard 
+            <AssetDashboard
               connected={connected}
               address={connection?.account.address || ""}
               onConnect={handleConnect}
@@ -821,7 +1032,7 @@ export default function Home() {
               {nodeStatus ? (
                 <div className="text-sm text-gray-500 space-y-1">
                   <p className="flex items-center gap-2">
-                    <motion.span 
+                    <motion.span
                       className="w-2 h-2 rounded-full bg-green-500"
                       animate={{ scale: [1, 1.2, 1] }}
                       transition={{ duration: 2, repeat: Infinity }}
@@ -832,12 +1043,23 @@ export default function Home() {
                   <p>Block: {nodeStatus.blockHeight}</p>
                 </div>
               ) : (
-                <p className="text-sm text-gray-600">Loading node status...</p>
+                <div className="text-sm text-gray-600 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <motion.span
+                      className="w-2 h-2 rounded-full bg-yellow-500"
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    />
+                    Pinging the node...
+                  </div>
+                  <div className="w-32 h-3 rounded bg-white/5 shimmer" />
+                  <div className="w-24 h-3 rounded bg-white/5 shimmer" />
+                </div>
               )}
             </motion.div>
           </div>
           <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
-            <p>© 2026 RuneBolt. Built on Bitcoin.</p>
+            <p>&copy; 2026 RuneBolt. Built on Bitcoin.</p>
             <p>Non-custodial. Open source. MIT License.</p>
           </div>
         </div>

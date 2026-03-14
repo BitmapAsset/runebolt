@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useEffect, useRef, useCallback } from "react";
-import { motion, useReducedMotion, useInView } from "framer-motion";
+import { useReducedMotion, useInView } from "framer-motion";
 
 interface Particle {
   id: number;
@@ -43,6 +43,7 @@ const ASSET_THEMES = {
 };
 
 // Off-screen canvas for particle rendering - NO React state updates
+// rAF loop only runs when particles exist (idle = 0 CPU)
 function useParticleCanvas(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   trigger: string | null | undefined,
@@ -50,74 +51,33 @@ function useParticleCanvas(
   intensity: "low" | "medium" | "high"
 ) {
   const particlesRef = useRef<Particle[]>([]);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number>(0);
+  const isRunningRef = useRef(false);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const theme = ASSET_THEMES[asset];
 
-  const emitParticles = useCallback((count: number, startX?: number, startY?: number) => {
+  // Render loop that auto-stops when particles are depleted
+  const startRenderLoop = useCallback(() => {
+    if (isRunningRef.current) return;
+    const ctx = ctxRef.current;
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!ctx || !canvas) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = startX !== undefined ? (startX / 100) * rect.width : rect.width / 2;
-    const y = startY !== undefined ? (startY / 100) * rect.height : rect.height / 2;
-
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 2 + Math.random() * 4;
-      
-      particlesRef.current.push({
-        id: Date.now() + i,
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 3,
-        life: 1,
-        maxLife: 60 + Math.random() * 30,
-        size: intensity === "high" ? 6 + Math.random() * 4 : intensity === "medium" ? 4 + Math.random() * 3 : 2 + Math.random() * 2,
-        color: theme.colors[Math.floor(Math.random() * theme.colors.length)],
-        rotation: Math.random() * 360,
-        rotationSpeed: (Math.random() - 0.5) * 10,
-        type: Math.random() > 0.7 ? "confetti" : "spark",
-      });
-    }
-  }, [canvasRef, theme, intensity]);
-
-  useEffect(() => {
-    if (trigger) {
-      const count = intensity === "high" ? 40 : intensity === "medium" ? 25 : 15;
-      emitParticles(count, 50, 50);
-    }
-  }, [trigger, intensity, emitParticles]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener("resize", resize, { passive: true });
-
+    isRunningRef.current = true;
     let frameCount = 0;
+
     const render = () => {
       frameCount++;
-      // Render every 2nd frame for 30fps particle animation (performance optimization)
       if (frameCount % 2 === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         particlesRef.current = particlesRef.current.filter((p) => {
           p.x += p.vx;
           p.y += p.vy;
-          p.vy += 0.15; // gravity
-          p.vx *= 0.98; // friction
+          p.vy += 0.15;
+          p.vx *= 0.98;
           p.rotation += p.rotationSpeed;
           p.life -= 1 / p.maxLife;
-
           if (p.life <= 0) return false;
 
           ctx.save();
@@ -142,14 +102,71 @@ function useParticleCanvas(
         });
       }
 
-      rafRef.current = requestAnimationFrame(render);
+      if (particlesRef.current.length > 0) {
+        rafRef.current = requestAnimationFrame(render);
+      } else {
+        isRunningRef.current = false;
+      }
     };
 
-    render();
+    rafRef.current = requestAnimationFrame(render);
+  }, [canvasRef]);
+
+  const emitParticles = useCallback((count: number, startX?: number, startY?: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = startX !== undefined ? (startX / 100) * rect.width : rect.width / 2;
+    const y = startY !== undefined ? (startY / 100) * rect.height : rect.height / 2;
+
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 4;
+
+      particlesRef.current.push({
+        id: Date.now() + i,
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 3,
+        life: 1,
+        maxLife: 60 + Math.random() * 30,
+        size: intensity === "high" ? 6 + Math.random() * 4 : intensity === "medium" ? 4 + Math.random() * 3 : 2 + Math.random() * 2,
+        color: theme.colors[Math.floor(Math.random() * theme.colors.length)],
+        rotation: Math.random() * 360,
+        rotationSpeed: (Math.random() - 0.5) * 10,
+        type: Math.random() > 0.7 ? "confetti" : "spark",
+      });
+    }
+
+    startRenderLoop();
+  }, [canvasRef, theme, intensity, startRenderLoop]);
+
+  useEffect(() => {
+    if (trigger) {
+      const count = intensity === "high" ? 40 : intensity === "medium" ? 25 : 15;
+      emitParticles(count, 50, 50);
+    }
+  }, [trigger, intensity, emitParticles]);
+
+  // Canvas setup only - no perpetual rAF loop
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    ctxRef.current = canvas.getContext("2d");
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize, { passive: true });
 
     return () => {
       window.removeEventListener("resize", resize);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      isRunningRef.current = false;
     };
   }, [canvasRef]);
 
@@ -159,8 +176,6 @@ function useParticleCanvas(
 // Optimized particle system using Canvas API instead of React DOM
 export const ParticleSystem = memo(function ParticleSystem({
   trigger,
-  origin,
-  type = "burst",
   asset = "bitmap",
   intensity = "medium",
 }: ParticleSystemProps) {
@@ -198,7 +213,7 @@ export const ConfettiExplosion = memo(function ConfettiExplosion({
   if (!active || shouldReduceMotion) return null;
 
   const colors = ASSET_THEMES[asset as keyof typeof ASSET_THEMES]?.colors || ASSET_THEMES.bitmap.colors;
-  const confettiCount = 30; // Reduced from 60 for performance
+  const confettiCount = 30;
 
   return (
     <div ref={containerRef} className="fixed inset-0 pointer-events-none z-40 flex items-center justify-center">
@@ -208,7 +223,7 @@ export const ConfettiExplosion = memo(function ConfettiExplosion({
         const color = colors[i % colors.length];
         const tx = Math.cos(angle) * distance;
         const ty = Math.sin(angle) * distance + 100;
-        
+
         return (
           <div
             key={i}
@@ -288,7 +303,7 @@ export const SparkBurst = memo(function SparkBurst({
         const angle = (i / 8) * Math.PI * 2;
         const tx = Math.cos(angle) * 40;
         const ty = Math.sin(angle) * 40;
-        
+
         return (
           <div
             key={i}

@@ -98,8 +98,10 @@ export class DeedWatcher extends EventEmitter {
     let txs: RawTransaction[];
     try {
       txs = await this.rpc.getAddressMempoolTxs(this.address);
-    } catch {
-      // Fallback: if address-based mempool query isn't supported, skip
+    } catch (err) {
+      // Emit error so callers can handle it (e.g. log, retry with backoff)
+      // Don't re-throw — the poll loop handles errors at a higher level
+      this.emit('error', new Error(`scanMempool failed for ${this.address}: ${(err as Error).message}`));
       return;
     }
 

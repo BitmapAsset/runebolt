@@ -61,6 +61,8 @@ interface RPCConfig {
   rpcPass?: string;
   /** Mempool.space base URL (default: https://mempool.space) */
   mempoolUrl?: string;
+  /** Request timeout in milliseconds (default: 30000) */
+  timeoutMs?: number;
 }
 
 /**
@@ -73,6 +75,7 @@ export class BitcoinRPC {
   private rpcUser: string;
   private rpcPass: string;
   private mempoolUrl: string;
+  private timeoutMs: number;
 
   constructor(config: RPCConfig) {
     this.backend = config.backend;
@@ -80,6 +83,7 @@ export class BitcoinRPC {
     this.rpcUser = config.rpcUser || '';
     this.rpcPass = config.rpcPass || '';
     this.mempoolUrl = config.mempoolUrl || 'https://mempool.space';
+    this.timeoutMs = config.timeoutMs || 30_000;
   }
 
   /**
@@ -217,6 +221,7 @@ export class BitcoinRPC {
           port: url.port || (isHttps ? 443 : 8332),
           path: url.pathname,
           method: 'POST',
+          timeout: this.timeoutMs,
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Basic ' + Buffer.from(`${this.rpcUser}:${this.rpcPass}`).toString('base64'),
@@ -236,6 +241,10 @@ export class BitcoinRPC {
           });
         }
       );
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error(`RPC request timed out after ${this.timeoutMs}ms`));
+      });
       req.on('error', reject);
       req.write(body);
       req.end();
@@ -249,7 +258,7 @@ export class BitcoinRPC {
     const transport = url.startsWith('https') ? https : http;
 
     return new Promise<T>((resolve, reject) => {
-      transport.get(url, (res) => {
+      const req = transport.get(url, (res) => {
         let data = '';
         res.on('data', (chunk) => (data += chunk));
         res.on('end', () => {
@@ -270,7 +279,12 @@ export class BitcoinRPC {
             reject(new Error(`Failed to parse mempool response: ${data.slice(0, 200)}`));
           }
         });
-      }).on('error', reject);
+      });
+      req.setTimeout(this.timeoutMs, () => {
+        req.destroy();
+        reject(new Error(`Mempool GET timed out after ${this.timeoutMs}ms`));
+      });
+      req.on('error', reject);
     });
   }
 
@@ -286,6 +300,7 @@ export class BitcoinRPC {
           port: url.port || (isHttps ? 443 : 80),
           path: url.pathname,
           method: 'POST',
+          timeout: this.timeoutMs,
           headers: {
             'Content-Type': 'text/plain',
             'Content-Length': Buffer.byteLength(body),
@@ -303,6 +318,10 @@ export class BitcoinRPC {
           });
         }
       );
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error(`Broadcast request timed out after ${this.timeoutMs}ms`));
+      });
       req.on('error', reject);
       req.write(body);
       req.end();

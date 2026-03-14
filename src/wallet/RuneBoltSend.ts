@@ -171,10 +171,11 @@ export async function sendAsset(
   const deedLockTxid = await client.broadcastTx(deedLockTx.toHex());
 
   // Step 5: Build notification tx
-  // Find a fee-funding UTXO (separate from the asset UTXO)
-  const fundingUtxo = params.senderWallet.utxos.length > 1
-    ? params.senderWallet.utxos[1]
-    : params.senderWallet.utxos[0];
+  // Must use a separate UTXO from the asset to avoid double-spending
+  if (params.senderWallet.utxos.length < 2) {
+    throw new Error('At least 2 UTXOs required: one for the asset deed-lock and one for the notification transaction');
+  }
+  const fundingUtxo = params.senderWallet.utxos[1];
 
   const notificationFunding: FundingUTXO = {
     txid: fundingUtxo.txid,

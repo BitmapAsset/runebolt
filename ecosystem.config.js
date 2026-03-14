@@ -1,7 +1,7 @@
 module.exports = {
   apps: [{
     name: 'runebolt',
-    script: 'src/server.js',
+    script: 'dist/api/server.js',
     instances: 1,
     autorestart: true,
     watch: false,

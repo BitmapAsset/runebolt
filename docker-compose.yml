@@ -77,7 +77,7 @@ services:
       lnd:
         condition: service_healthy
     ports:
-      - "${SERVER_PORT:-3000}:3000"
+      - "${RUNEBOLT_PORT:-3141}:3141"
     volumes:
       - lnd-data:/root/.lnd:ro
     environment:
@@ -98,7 +98,7 @@ services:
       - MAX_SWAP_AMOUNT=${MAX_SWAP_AMOUNT:-100000000}
       - BRIDGE_ADDRESS=${BRIDGE_ADDRESS:-}
       - BRIDGE_PRIVKEY_PATH=${BRIDGE_PRIVKEY_PATH:-}
-      - SERVER_PORT=3000
+      - RUNEBOLT_PORT=3141
       - SERVER_HOST=0.0.0.0
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
       - LOG_LEVEL=${LOG_LEVEL:-info}

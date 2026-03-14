@@ -69,6 +69,9 @@ export class AutoClaimer {
     };
   }
 
+  private boundOnDeedDetected = (deed: IncomingDeed) => this.onDeedDetected(deed);
+  private boundOnDeedConfirmed = (deed: IncomingDeed) => this.onDeedConfirmed(deed);
+
   /** Start auto-claiming — listens to DeedWatcher events. */
   start(): void {
     if (this.running) return;
@@ -77,15 +80,15 @@ export class AutoClaimer {
     }
     this.running = true;
 
-    this.watcher.on('deed_detected', (deed: IncomingDeed) => this.onDeedDetected(deed));
-    this.watcher.on('deed_confirmed', (deed: IncomingDeed) => this.onDeedConfirmed(deed));
+    this.watcher.on('deed_detected', this.boundOnDeedDetected);
+    this.watcher.on('deed_confirmed', this.boundOnDeedConfirmed);
   }
 
   /** Stop auto-claiming. */
   stop(): void {
     this.running = false;
-    this.watcher.removeAllListeners('deed_detected');
-    this.watcher.removeAllListeners('deed_confirmed');
+    this.watcher.removeListener('deed_detected', this.boundOnDeedDetected);
+    this.watcher.removeListener('deed_confirmed', this.boundOnDeedConfirmed);
     if (this.batchTimer) {
       clearTimeout(this.batchTimer);
       this.batchTimer = null;

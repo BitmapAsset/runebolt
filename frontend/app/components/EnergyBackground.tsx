@@ -35,8 +35,8 @@ export function EnergyBackground({ variant = "default", intensity = "medium" }: 
       {/* Animated Tron Grid */}
       <TronGrid color={colors.primary} opacity={opacity * 0.5} />
       
-      {/* Floating Particles */}
-      <FloatingParticles color={colors.primary} count={intensity === "high" ? 30 : intensity === "medium" ? 20 : 10} />
+      {/* Floating Particles - reduced count for performance */}
+      <FloatingParticles color={colors.primary} count={intensity === "high" ? 12 : intensity === "medium" ? 8 : 5} />
       
       {/* Energy Rivers */}
       <EnergyRivers colors={[colors.primary, colors.secondary]} />
