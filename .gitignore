@@ -1,0 +1,67 @@
+# ===================================
+# SECURITY-FIRST .gitignore
+# RuneBolt — Public Repository
+# ===================================
+
+# === SECRETS & CREDENTIALS ===
+.env
+.env.*
+!.env.example
+!.env.production.example
+!.env.production.template
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+*.macaroon
+
+# === DATABASES ===
+*.db
+*.sqlite
+*.sqlite3
+*.sql.bak
+
+# === OPENCLAW / AGENT FILES ===
+.openclaw/
+MEMORY.md
+SOUL.md
+USER.md
+IDENTITY.md
+HEARTBEAT.md
+TOOLS.md
+AGENTS.md
+BOOTSTRAP.md
+memory/
+soul-backup/
+backups/
+
+# === WORKSPACE ARTIFACTS ===
+tmp/
+
+# === NODE / BUILD ===
+node_modules/
+dist/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# === BUILD CACHES ===
+.turbo/
+.cache/
+*.sst
+
+# === VERCEL ===
+.vercel/
+
+# === LOGS ===
+*.log
+logs/
+npm-debug.log*
+
+# === OS ===
+.DS_Store
+Thumbs.db
