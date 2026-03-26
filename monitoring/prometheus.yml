@@ -1,0 +1,223 @@
+# RuneBolt Prometheus Configuration
+# Version: 1.0.0
+# Monitors: Application metrics, infrastructure, business metrics
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'runebolt-production'
+    replica: '{{.ExternalURL}}'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Load alerting rules
+rule_files:
+  - '/etc/prometheus/alerts/*.yml'
+
+# Scrape configurations
+scrape_configs:
+  # ============================================
+  # Prometheus Self-Monitoring
+  # ============================================
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # ============================================
+  # RuneBolt Backend API
+  # ============================================
+  - job_name: 'runebolt-backend-api'
+    static_configs:
+      - targets: ['backend-api:3001']
+        labels:
+          service: 'backend-api'
+          tier: 'application'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    scheme: http
+
+  # ============================================
+  # RuneBolt Backend Worker
+  # ============================================
+  - job_name: 'runebolt-backend-worker'
+    static_configs:
+      - targets: ['backend-worker:3001']
+        labels:
+          service: 'backend-worker'
+          tier: 'application'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    scheme: http
+
+  # ============================================
+  # RuneBolt Frontend
+  # ============================================
+  - job_name: 'runebolt-frontend'
+    static_configs:
+      - targets: ['frontend:3000']
+        labels:
+          service: 'frontend'
+          tier: 'application'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    scheme: http
+
+  # ============================================
+  # Node Exporter (System Metrics)
+  # ============================================
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+          tier: 'infrastructure'
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # ============================================
+  # cAdvisor (Container Metrics)
+  # ============================================
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+          tier: 'infrastructure'
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # ============================================
+  # PostgreSQL Exporter
+  # ============================================
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+          tier: 'database'
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # ============================================
+  # Redis Exporter
+  # ============================================
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+          tier: 'cache'
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # ============================================
+  # HAProxy Exporter
+  # ============================================
+  - job_name: 'haproxy-exporter'
+    static_configs:
+      - targets: ['haproxy:8404']
+        labels:
+          service: 'haproxy'
+          tier: 'loadbalancer'
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # ============================================
+  # Vault Metrics
+  # ============================================
+  - job_name: 'vault'
+    static_configs:
+      - targets: ['vault:8200']
+        labels:
+          service: 'vault'
+          tier: 'secrets'
+    scrape_interval: 30s
+    metrics_path: /v1/sys/metrics
+    params:
+      format: ['prometheus']
+    scheme: http
+    # bearer_token_file: /etc/prometheus/vault-token (if ACL enabled)
+
+  # ============================================
+  # Docker Daemon Metrics
+  # ============================================
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['localhost:9323']
+        labels:
+          service: 'docker'
+          tier: 'infrastructure'
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # ============================================
+  # Blackbox Exporter (Probes)
+  # ============================================
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - https://runebolt.io/health
+        - https://api.runebolt.io/health
+        - https://ws.runebolt.io/health
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: 'blackbox-tcp'
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+        - postgres:5432
+        - redis:6379
+        - vault:8200
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # ============================================
+  # Custom Business Metrics (Pushgateway)
+  # ============================================
+  - job_name: 'pushgateway'
+    honor_labels: true
+    static_configs:
+      - targets: ['pushgateway:9091']
+        labels:
+          service: 'pushgateway'
+          tier: 'metrics'
+    scrape_interval: 30s
+
+  # ============================================
+  # Loki Metrics
+  # ============================================
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+        labels:
+          service: 'loki'
+          tier: 'logging'
+    scrape_interval: 30s
+    metrics_path: /metrics

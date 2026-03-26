@@ -1,0 +1,109 @@
+{
+  "dashboard": {
+    "title": "RuneBolt Performance Dashboard",
+    "refresh": "5s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Transfer Throughput (TPS)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(transfers_total[1m])",
+            "legendFormat": "Transfers/sec"
+          }
+        ],
+        "alert": {
+          "name": "Low TPS",
+          "condition": "transfer_rate < 100",
+          "for": "5m"
+        }
+      },
+      {
+        "id": 2,
+        "title": "Latency Percentiles",
+        "type": "graph",
+        "targets": [
+          { "expr": "histogram_quantile(0.50, transfer_duration_seconds)", "legendFormat": "p50" },
+          { "expr": "histogram_quantile(0.95, transfer_duration_seconds)", "legendFormat": "p95" },
+          { "expr": "histogram_quantile(0.99, transfer_duration_seconds)", "legendFormat": "p99" }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Database Pool Status",
+        "type": "stat",
+        "targets": [
+          { "expr": "db_pool_total", "legendFormat": "Total" },
+          { "expr": "db_pool_idle", "legendFormat": "Idle" },
+          { "expr": "db_pool_waiting", "legendFormat": "Waiting" }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Cache Hit Rate",
+        "type": "gauge",
+        "targets": [
+          { "expr": "redis_keyspace_hits / (redis_keyspace_hits + redis_keyspace_misses)" }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "WebSocket Connections",
+        "type": "graph",
+        "targets": [
+          { "expr": "websocket_connections", "legendFormat": "Active" }
+        ],
+        "alert": {
+          "name": "High Connection Count",
+          "condition": "websocket_connections > 10000",
+          "for": "1m"
+        }
+      },
+      {
+        "id": 6,
+        "title": "Error Rate by Endpoint",
+        "type": "graph",
+        "targets": [
+          { "expr": "rate(http_requests_total{status=~\"5..\"}[5m])", "legendFormat": "{{endpoint}}" }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Active Channels by State",
+        "type": "pie",
+        "targets": [
+          { "expr": "channels_total", "legendFormat": "{{state}}" }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Rate Limit Hits",
+        "type": "graph",
+        "targets": [
+          { "expr": "rate(rate_limit_hits_total[1m])", "legendFormat": "Rate Limited" }
+        ]
+      }
+    ],
+    "alerts": [
+      {
+        "name": "HighLatency",
+        "expr": "histogram_quantile(0.99, transfer_duration_seconds) > 0.05",
+        "for": "5m",
+        "severity": "warning"
+      },
+      {
+        "name": "DatabasePoolExhausted",
+        "expr": "db_pool_waiting > 10",
+        "for": "1m",
+        "severity": "critical"
+      },
+      {
+        "name": "CacheHitRateLow",
+        "expr": "redis_keyspace_hits / (redis_keyspace_hits + redis_keyspace_misses) < 0.8",
+        "for": "5m",
+        "severity": "warning"
+      }
+    ]
+  }
+}

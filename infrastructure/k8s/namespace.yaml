@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: runebolt
+  labels:
+    name: runebolt
+    environment: production
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: runebolt-quota
+  namespace: runebolt
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: 20Gi
+    limits.cpu: "20"
+    limits.memory: 40Gi
+    pods: "20"

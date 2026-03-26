@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  body {
+    @apply bg-dark-900 text-white antialiased;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-dark-600;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-dark-700;
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #2a2a3e transparent;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply rounded-2xl border border-dark-700 bg-dark-800/80 backdrop-blur-xl shadow-lg shadow-black/20;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-bitcoin to-cyan bg-clip-text text-transparent;
+  }
+
+  .gradient-text-orange {
+    @apply bg-gradient-to-r from-bitcoin to-orange-400 bg-clip-text text-transparent;
+  }
+
+  .glass-card-glow {
+    @apply rounded-2xl border border-dark-700 bg-dark-800/80 backdrop-blur-xl shadow-lg shadow-black/20;
+    box-shadow:
+      0 0 0 1px rgba(247, 147, 26, 0.05),
+      0 4px 24px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  .fun-button {
+    @apply relative overflow-hidden rounded-2xl bg-gradient-to-r from-bitcoin via-orange-500 to-bitcoin
+           px-8 py-4 text-base font-bold text-white shadow-xl shadow-bitcoin/25
+           transition-all duration-300;
+    background-size: 200% 100%;
+  }
+
+  .fun-button:hover {
+    background-position: 100% 0;
+    box-shadow: 0 0 30px rgba(247, 147, 26, 0.4), 0 10px 40px rgba(247, 147, 26, 0.2);
+    transform: translateY(-2px);
+  }
+
+  .fun-button:active {
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(247, 147, 26, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(247, 147, 26, 0.4);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Shiba paw trail effect */
+@keyframes paw-trail {
+  0% { opacity: 0; transform: scale(0); }
+  30% { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.8); }
+}
+
+/* Number input - hide spinners */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Selection color */
+::selection {
+  background: rgba(247, 147, 26, 0.3);
+  color: white;
+}

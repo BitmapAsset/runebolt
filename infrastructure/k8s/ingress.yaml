@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: runebolt-ingress
+  namespace: runebolt
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+spec:
+  tls:
+  - hosts:
+    - runebolt.io
+    - api.runebolt.io
+    secretName: runebolt-tls
+  rules:
+  - host: runebolt.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: runebolt-frontend
+            port:
+              number: 3000
+  - host: api.runebolt.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: runebolt-backend
+            port:
+              number: 3001
