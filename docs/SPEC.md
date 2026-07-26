@@ -508,12 +508,20 @@ them structurally: signed fields versus attributed fields.
     "location": "<txid>:<vout>",
     "address": "<signer address>",
     "issuedAt": "<RFC3339>",
-    "nonce": "<hex>"
+    "nonce": "<hex>",
+    "digest": "<sha256 hex>"              // optional; the artifact this deed is about
   },
   "signature": "<BIP-322>",
   "attributed": { /* §8.3 — NOT covered by the signature */ }
 }
 ```
+
+**`digest` binds a deed to an artifact.** Without it a deed covers a *location*, and the same
+signature can be lifted onto any other envelope for that UTXO — a different price, a different
+payout address, a different PSBT. A listing deed therefore sets `digest` to the sha256 of the
+canonical envelope encoding (§8.1), which contains the offer PSBT, so signing the deed signs the
+offer. The field is optional because a cancel deed legitimately refers to the location rather than
+to one envelope: cancelling is about the lot, not about a particular listing of it.
 
 ### 8.3 Attribution block — indexer-attributed fields
 

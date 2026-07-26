@@ -26,6 +26,13 @@ export interface DeedPayload {
   readonly address: string
   readonly issuedAt: string
   readonly nonce: string
+  /**
+   * SPEC §8.2. Optional sha256 over the artifact the deed is about — for a listing deed, the
+   * canonical envelope bytes (§8.1). Without it a deed covers a *location*, and the same signature
+   * can be lifted onto any other envelope for the same UTXO: a different price, a different payout
+   * address, a different PSBT.
+   */
+  readonly digest?: string
 }
 
 export interface Deed {
@@ -45,6 +52,9 @@ export function parseDeed(value: unknown, path = 'deed'): Deed {
   const location = requireString(signed['location'], CODE, `${path}.signed.location`)
   parseLocation(location)
 
+  const digest = optional(signed['digest'], (raw) =>
+    requireHex(raw, CODE, `${path}.signed.digest`),
+  )
   const payload: DeedPayload = {
     v: 1,
     type: requireEnum(signed['type'], DEED_TYPES, CODE, `${path}.signed.type`),
@@ -52,6 +62,7 @@ export function parseDeed(value: unknown, path = 'deed'): Deed {
     address: requireString(signed['address'], CODE, `${path}.signed.address`),
     issuedAt: requireRfc3339(signed['issuedAt'], CODE, `${path}.signed.issuedAt`),
     nonce: requireHex(signed['nonce'], CODE, `${path}.signed.nonce`),
+    ...(digest === undefined ? {} : { digest }),
   }
 
   const attributed = optional(record['attributed'], (raw) =>
@@ -99,5 +110,6 @@ function deedPayloadWire(payload: DeedPayload): Record<string, unknown> {
     address: payload.address,
     issuedAt: payload.issuedAt,
     nonce: payload.nonce,
+    ...(payload.digest === undefined ? {} : { digest: payload.digest }),
   }
 }
