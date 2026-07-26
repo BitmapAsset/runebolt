@@ -424,8 +424,15 @@ describe('I-12 signature state', () => {
     expectFailsClosed(verdict, ProtocolErrorCode.E_SIGNATURE_STATE)
   })
 
-  it('rejects a seller signature that is not SIGHASH_SINGLE|ANYONECANPAY', async () => {
-    const scenario = twoDummyScenario({ signers: ['seller'], sellerSighashType: 0x01 })
+})
+
+describe('I-19 E_SIGHASH_MISMATCH', () => {
+  it.each([
+    ['SIGHASH_ALL', 0x01],
+    ['SIGHASH_NONE|ANYONECANPAY', 0x82],
+    ['SIGHASH_SINGLE without ANYONECANPAY', 0x03],
+  ])('rejects a seller signature made with %s', async (_name, sellerSighashType) => {
+    const scenario = twoDummyScenario({ signers: ['seller'], sellerSighashType })
     const verdict = await verifyOffer({
       ...base,
       envelope: scenario.envelope,
@@ -433,7 +440,10 @@ describe('I-12 signature state', () => {
       signer: BUYER_VIEW,
       satOffset: SAT_OFFSET,
     })
-    expectFailsClosed(verdict, ProtocolErrorCode.E_SIGNATURE_STATE)
+    // Its own code, not E_SIGNATURE_STATE: the signature state is correct — seller signed, buyer
+    // has not — and what is wrong is which transaction that signature actually covers.
+    expectFailsClosed(verdict, ProtocolErrorCode.E_SIGHASH_MISMATCH)
+    expect(verdict.errors.map((error) => error.invariant)).toContain('I-19')
   })
 })
 

@@ -17,6 +17,24 @@ import { parsePsbtView, type PsbtInputView, type PsbtView } from './psbt.js'
 
 export type SignerRole = 'seller' | 'buyer'
 
+/**
+ * Where the offer sits in the sell-offer lifecycle. It decides which inputs are expected to carry
+ * a signature and nothing else — every structural check runs identically at every stage.
+ *
+ * | stage      | lot input             | every other input |
+ * |------------|-----------------------|-------------------|
+ * | `draft`    | unsigned              | unsigned          |
+ * | `offer`    | signed                | unsigned          |
+ * | `pre-sign` | per ownership         | per ownership     |
+ * | `final`    | signed                | signed            |
+ *
+ * `pre-sign` is the default and is the only role-relative stage: own inputs unsigned, counterparty
+ * inputs signed — "everyone else has signed and I am about to". `draft` and `offer` exist because a
+ * *sell* offer is signed by the seller first, against buyer placeholders that nobody has signed
+ * (SPEC §6.1): requiring counterparty signatures there would be requiring a counterparty.
+ */
+export type OfferStage = 'draft' | 'offer' | 'pre-sign' | 'final'
+
 export interface SignerView {
   /** Addresses the signer controls. Ownership of inputs and outputs is decided from these. */
   readonly addresses: readonly string[]
@@ -28,6 +46,8 @@ export interface VerifyOfferParams {
   readonly envelope: ListingEnvelope
   readonly role: SignerRole
   readonly signer: SignerView
+  /** Defaults to `pre-sign`, which is the checklist `ord`'s `offer accept` runs. */
+  readonly stage?: OfferStage
   /** Defaults to `envelope.psbt`; pass the completed swap when the buyer verifies before signing. */
   readonly psbt?: string
   readonly indexer?: IndexerAdapter
@@ -163,7 +183,7 @@ export async function verifyOffer(params: VerifyOfferParams): Promise<VerifyVerd
     )
   }
 
-  checkSignatureState(view, ownedInputs, lotInput, envelope, role, add)
+  checkSignatureState(view, ownedInputs, lotInput, envelope, params.stage ?? 'pre-sign', add)
 
   const warnings = preSignLint(view, envelope, contents, lotInput)
 
@@ -477,46 +497,66 @@ function inDummyBand(value: number): boolean {
   return value >= DUMMY_UTXO_MIN_VALUE && value <= DUMMY_UTXO_MAX_VALUE
 }
 
-/** I-12, plus the sighash flags the signature actually carries. */
+/** I-12, plus I-19 on the sighash flags the seller's signature actually carries. */
 function checkSignatureState(
   view: PsbtView,
   ownedInputs: readonly PsbtInputView[],
   lotInput: PsbtInputView | undefined,
   envelope: ListingEnvelope,
-  role: SignerRole,
+  stage: OfferStage,
   add: Add,
 ): void {
   const owned = new Set(ownedInputs.map((input) => input.index))
 
   for (const input of view.inputs) {
-    if (owned.has(input.index)) {
-      if (input.signed) {
-        add(ProtocolErrorCode.E_SIGNATURE_STATE, `own input ${input.index} is already signed`, {
-          index: input.index,
-        })
-      }
-      continue
+    const isLot = lotInput !== undefined && input.index === lotInput.index
+    const expected = expectedSignature(stage, owned.has(input.index), isLot)
+    if (expected === 'signed' && !input.signed) {
+      add(ProtocolErrorCode.E_SIGNATURE_STATE, `input ${input.index} is unsigned at stage ${stage}`, {
+        index: input.index,
+        stage,
+      })
     }
-    if (!input.signed) {
+    if (expected === 'unsigned' && input.signed) {
       add(
         ProtocolErrorCode.E_SIGNATURE_STATE,
-        `counterparty input ${input.index} is unsigned`,
-        { index: input.index },
+        `input ${input.index} is already signed at stage ${stage}`,
+        { index: input.index, stage },
       )
     }
   }
 
-  if (role === 'buyer' && lotInput !== undefined && lotInput.signed) {
-    if (
-      envelope.sighashMode === 'SINGLE_ACAP' &&
-      lotInput.sighashType !== SIGHASH_SINGLE_ANYONECANPAY
-    ) {
-      add(
-        ProtocolErrorCode.E_SIGNATURE_STATE,
-        `seller signature must be SIGHASH_SINGLE|ANYONECANPAY (0x83), found ${describeSighash(lotInput.sighashType)}`,
-        { sighashType: lotInput.sighashType },
-      )
-    }
+  // I-19. Judged from the signature itself, not from the unsigned `sighashType` hint, and judged
+  // wherever the lot input carries one: a seller who signs SIGHASH_ALL by accident has signed a
+  // transaction the buyer can no longer complete, and one who signs SIGHASH_NONE has signed away
+  // the output that pays them.
+  if (
+    lotInput?.signed === true &&
+    envelope.sighashMode === 'SINGLE_ACAP' &&
+    lotInput.sighashType !== SIGHASH_SINGLE_ANYONECANPAY
+  ) {
+    add(
+      ProtocolErrorCode.E_SIGHASH_MISMATCH,
+      `seller signature must be SIGHASH_SINGLE|ANYONECANPAY (0x83) for sighashMode SINGLE_ACAP, found ${describeSighash(lotInput.sighashType)}`,
+      { sighashType: lotInput.sighashType, sighashMode: envelope.sighashMode },
+    )
+  }
+}
+
+function expectedSignature(
+  stage: OfferStage,
+  isOwn: boolean,
+  isLot: boolean,
+): 'signed' | 'unsigned' {
+  switch (stage) {
+    case 'draft':
+      return 'unsigned'
+    case 'offer':
+      return isLot ? 'signed' : 'unsigned'
+    case 'final':
+      return 'signed'
+    case 'pre-sign':
+      return isOwn ? 'unsigned' : 'signed'
   }
 }
 

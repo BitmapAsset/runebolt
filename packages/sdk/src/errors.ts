@@ -23,6 +23,7 @@ export const ProtocolErrorCode = {
   E_LOT_DRIFT: 'E_LOT_DRIFT',
   E_UNKNOWN_SIGHASH_MODE: 'E_UNKNOWN_SIGHASH_MODE',
   E_EXPIRED: 'E_EXPIRED',
+  E_SIGHASH_MISMATCH: 'E_SIGHASH_MISMATCH',
 } as const
 
 export type ProtocolErrorCode = (typeof ProtocolErrorCode)[keyof typeof ProtocolErrorCode]
@@ -34,6 +35,9 @@ export const ImplementationErrorCode = {
   E_MALFORMED_PSBT: 'E_MALFORMED_PSBT',
   E_MALFORMED_LOCATION: 'E_MALFORMED_LOCATION',
   E_INDEXER_UNAVAILABLE: 'E_INDEXER_UNAVAILABLE',
+  E_UNSUPPORTED_ASSET_CLASS: 'E_UNSUPPORTED_ASSET_CLASS',
+  E_INSUFFICIENT_FUNDS: 'E_INSUFFICIENT_FUNDS',
+  E_OFFER_MUTATED: 'E_OFFER_MUTATED',
 } as const
 
 export type ImplementationErrorCode =
@@ -167,6 +171,12 @@ export const INVARIANTS: readonly Invariant[] = [
     code: ProtocolErrorCode.E_EXPIRED,
     class: 'serve-time',
     statement: 'Listing has not passed expiresAt',
+  },
+  {
+    id: 'I-19',
+    code: ProtocolErrorCode.E_SIGHASH_MISMATCH,
+    class: 'verifyOffer',
+    statement: "The seller signature's sighash flags match the envelope's sighashMode",
   },
 ]
 

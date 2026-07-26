@@ -278,6 +278,32 @@ to the buyer, so the buyer remains able to buy again. [verified — msigner does
 fewer than two conforming dummies cannot transact at all (R11), so the SDK MUST ship an auto-create
 helper and a specific error (§7.2, `E_NO_DUMMY_UTXOS`) rather than a generic funding failure.
 
+#### 6.1.1 The full arrangement exists before the seller signs
+
+**Normative.** A seller offer MUST be signed against the *complete* layout above — at least three
+inputs and three outputs, with the seller's input and payment both at index 2 — even though no buyer
+exists yet. The buyer's side is stood in for by **placeholders** that the buyer replaces.
+
+This is forced, not stylistic. `SIGHASH_SINGLE` selects the output at the *signing input's* index,
+so a seller who signs while their input sits at index 0 has signed a commitment to output 0 — and
+when the buyer later inserts the two dummies, the seller's input moves to index 2 while their
+signature still refers to output 0. The signature is then either invalid or, worse, valid over an
+output that belongs to the buyer. The alignment cannot be created after the fact; it has to be true
+at signing time.
+
+What the buyer may change is fixed by the sighash flags and by nothing else:
+
+- `ANYONECANPAY` commits to no other input, so inputs 0, 1 and 3+ may be replaced wholesale.
+- `SIGHASH_SINGLE` commits to no other output, so outputs 0, 1 and 3+ may be replaced wholesale.
+- Input 2, output 2, the transaction version, the locktime and the seller input's sequence are
+  covered by the signature and MUST be carried over byte-for-byte.
+
+Placeholders SHOULD be a deterministic, published identity rather than an arbitrary address, so that
+a book, a verifier or a human can tell an unconsumed offer from a completed swap. An implementation
+MUST NOT publish an offer whose placeholders remain in the *seller's* control: a placeholder the
+seller owns makes the seller's simulated balance delta (§7.2 step 3) wrong, which disables the one
+generic defence in the system.
+
 ### 6.2 Runes — runestone-free layout
 
 Adopted from `ord` #4290. [verified — issue fetched]
@@ -372,6 +398,15 @@ asserted in code and covered by a test that deliberately constructs the violatio
 | I-16 | The lot's indexer-reported contents at buy time match those at listing time | `E_LOT_DRIFT` | buy-time |
 | I-17 | `sighashMode` is a recognised enum value | `E_UNKNOWN_SIGHASH_MODE` | parse |
 | I-18 | Listing has not passed `expiresAt` | `E_EXPIRED` | serve-time |
+| I-19 | The seller signature's sighash flags match the envelope's `sighashMode` — `SINGLE_ACAP` means `0x83` | `E_SIGHASH_MISMATCH` | verifyOffer |
+
+I-19 is separate from I-12 on purpose. I-12 asks *who has signed*; I-19 asks *what they signed
+over*. A seller signature made with `SIGHASH_ALL` leaves the signature state perfectly correct and
+the offer completely unusable — the buyer cannot add a single input without invalidating it — while
+`SIGHASH_NONE` leaves the seller's own payment output uncommitted. Both were previously reported as
+`E_SIGNATURE_STATE`, which told an integrator to look at the wrong thing. The flags MUST be read
+from the signature itself, not from the PSBT's unsigned `sighashType` field: that field is a request
+to the wallet, and the whole point of the check is that wallets ignore it (§11.1).
 
 I-13 mirrors `ord`'s own refusal: `ensure!(runes.is_empty(), "outgoing input {} contains runes")`.
 [verified — `offer/accept.rs`] Note that this is also why `ord wallet offer accept` cannot be reused
