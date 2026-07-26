@@ -5,15 +5,22 @@ import { contentsEqual, isMixedUtxo, type UtxoContents } from '../types/attribut
 import { isExpired, type ListingEnvelope } from '../types/envelope.js'
 import { parseLocation, sameOutpoint } from '../types/location.js'
 import {
+  BUYER_RECEIVE_INDEX,
   DUMMY_UTXO_MAX_VALUE,
   DUMMY_UTXO_MIN_VALUE,
+  PLATFORM_FEE_INDEX,
   RUNE_BUYER_RECEIVE_INDEX,
   RUNE_SELLER_INDEX,
   SELLER_SIGNATURE_INDEX,
   SIGHASH_SINGLE_ANYONECANPAY,
 } from './constants.js'
 import { preSignLint, type LintWarning } from './lint.js'
-import { parsePsbtView, type PsbtInputView, type PsbtView } from './psbt.js'
+import {
+  parsePsbtView,
+  type PsbtInputView,
+  type PsbtOutputView,
+  type PsbtView,
+} from './psbt.js'
 
 export type SignerRole = 'seller' | 'buyer'
 
@@ -404,18 +411,57 @@ async function checkTwoDummyLayout(
     }
   }
 
-  const regenerated = view.outputs
-    .slice(SELLER_SIGNATURE_INDEX + 1)
-    .filter((output) => inDummyBand(output.valueSats)).length
+  checkDummyRegeneration(view, add)
+
+  await checkSatOffset(view, lotInput, envelope, params, contents, add)
+}
+
+/**
+ * I-8. The two regenerated dummies are the two outputs immediately after the seller payment —
+ * after the optional platform fee at index 3 (SPEC §6.1) — and they pay the same script that
+ * receives the asset, which is the only thing in the transaction the verifier can call "the buyer"
+ * without a wallet view.
+ *
+ * Counting any band-valued output after index 2 instead let a purchase satisfy I-8 without
+ * regenerating anything: a pair of dust outputs paid to a third party, or change that happened to
+ * land in the 580–1000 band, both passed while the buyer left the swap unable to buy again.
+ *
+ * This is deliberately strict: dummies sent to a buyer address other than the asset-receive script
+ * are rejected. The safety core fails closed at the expense of ergonomics (ARCHITECTURE §2.3).
+ */
+function checkDummyRegeneration(view: PsbtView, add: Add): void {
+  const assetOutput = view.outputs[BUYER_RECEIVE_INDEX]
+  // A missing or OP_RETURN asset output is I-5's finding; do not pile a second error onto it.
+  if (assetOutput === undefined || assetOutput.isOpReturn) return
+
+  const isRegenerated = (output: PsbtOutputView | undefined): boolean =>
+    output !== undefined &&
+    !output.isOpReturn &&
+    inDummyBand(output.valueSats) &&
+    sameScript(output.script, assetOutput.script)
+
+  // The pair sits at 3 and 4, or at 4 and 5 when a platform fee occupies index 3.
+  const first = isRegenerated(view.outputs[PLATFORM_FEE_INDEX])
+    ? PLATFORM_FEE_INDEX
+    : PLATFORM_FEE_INDEX + 1
+  const pair = [view.outputs[first], view.outputs[first + 1]]
+  const regenerated = pair.filter(isRegenerated).length
   if (regenerated < 2) {
     add(
       ProtocolErrorCode.E_DUMMY_NOT_REGENERATED,
-      `a purchase must emit 2 fresh dummy UTXOs, found ${regenerated}`,
-      { regenerated },
+      `a purchase must emit 2 fresh dummy UTXOs to the asset-receive script at outputs ${first} and ${first + 1}, found ${regenerated}`,
+      {
+        expectedIndexes: [first, first + 1],
+        found: pair.map((output) =>
+          output === undefined ? null : { index: output.index, valueSats: output.valueSats },
+        ),
+      },
     )
   }
+}
 
-  await checkSatOffset(view, lotInput, envelope, params, contents, add)
+function sameScript(a: Uint8Array, b: Uint8Array): boolean {
+  return a.length === b.length && a.every((byte, i) => byte === b[i])
 }
 
 /**

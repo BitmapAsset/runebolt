@@ -41,6 +41,8 @@ export const SELLER = party(1)
 export const SELLER_PAYOUT = party(2)
 export const BUYER = party(3)
 export const THIRD_PARTY = party(4)
+/** A second address the buyer controls, for the "change is not a regenerated dummy" fixtures. */
+export const BUYER_CHANGE = party(5)
 
 export interface FixtureInput {
   readonly txid: string

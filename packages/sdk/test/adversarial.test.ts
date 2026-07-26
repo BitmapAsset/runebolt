@@ -5,6 +5,7 @@ import { verifyOffer, type VerifyVerdict } from '../src/swap/verify.js'
 import type { AttributedContents, UtxoContents } from '../src/types/attribution.js'
 import {
   BUYER,
+  BUYER_CHANGE,
   BUYER_VIEW,
   NETWORK,
   NOW,
@@ -329,6 +330,78 @@ describe('I-7 / I-8 dummy UTXOs', () => {
       satOffset: SAT_OFFSET,
     })
     expectFailsClosed(verdict, ProtocolErrorCode.E_DUMMY_NOT_REGENERATED)
+  })
+
+  // Counting band-valued outputs after index 2 satisfied I-8 with anything dust-sized. The two
+  // fixtures below both regenerate nothing for the buyer and both passed that count.
+  it('two band-valued outputs paid to a third party regenerate nothing', async () => {
+    const scenario = twoDummyScenario({
+      outputs: [
+        { valueSats: RECOMBINE, owner: BUYER },
+        { valueSats: LOT_VALUE, owner: BUYER },
+        { valueSats: PAYMENT, owner: SELLER_PAYOUT },
+        { valueSats: CHANGE, owner: BUYER },
+        { valueSats: DUMMY_VALUE, owner: THIRD_PARTY },
+        { valueSats: DUMMY_VALUE, owner: THIRD_PARTY },
+      ],
+    })
+    const verdict = await verifyOffer({
+      ...base,
+      envelope: scenario.envelope,
+      role: 'seller',
+      signer: SELLER_VIEW,
+      satOffset: SAT_OFFSET,
+    })
+    expectFailsClosed(verdict, ProtocolErrorCode.E_DUMMY_NOT_REGENERATED)
+  })
+
+  it('change that lands in the 580–1000 band is not a regenerated dummy', async () => {
+    const change = 900
+    const scenario = twoDummyScenario({
+      outputs: [
+        { valueSats: RECOMBINE, owner: BUYER },
+        { valueSats: LOT_VALUE, owner: BUYER },
+        { valueSats: PAYMENT, owner: SELLER_PAYOUT },
+        // Two in-band outputs, but they are change at a different address — the buyer leaves the
+        // swap with no dummy bound to the script that received the asset.
+        { valueSats: change, owner: BUYER_CHANGE },
+        { valueSats: change, owner: BUYER_CHANGE },
+        { valueSats: CHANGE + DUMMY_VALUE * 2 - change * 2, owner: BUYER },
+      ],
+    })
+    const verdict = await verifyOffer({
+      ...base,
+      envelope: scenario.envelope,
+      role: 'seller',
+      signer: SELLER_VIEW,
+      satOffset: SAT_OFFSET,
+    })
+    expectFailsClosed(verdict, ProtocolErrorCode.E_DUMMY_NOT_REGENERATED)
+    expect(verdict.errors.find((e) => e.code === ProtocolErrorCode.E_DUMMY_NOT_REGENERATED)?.detail)
+      .toMatchObject({ expectedIndexes: [4, 5] })
+  })
+
+  it('accepts the dummies when a platform fee pushes them to outputs 4 and 5', async () => {
+    const platformFee = 5_000
+    const scenario = twoDummyScenario({
+      outputs: [
+        { valueSats: RECOMBINE, owner: BUYER },
+        { valueSats: LOT_VALUE, owner: BUYER },
+        { valueSats: PAYMENT, owner: SELLER_PAYOUT },
+        { valueSats: platformFee, owner: THIRD_PARTY },
+        { valueSats: DUMMY_VALUE, owner: BUYER },
+        { valueSats: DUMMY_VALUE, owner: BUYER },
+        { valueSats: CHANGE - platformFee, owner: BUYER },
+      ],
+    })
+    const verdict = await verifyOffer({
+      ...base,
+      envelope: scenario.envelope,
+      role: 'seller',
+      signer: SELLER_VIEW,
+      satOffset: SAT_OFFSET,
+    })
+    expect(verdict.errors).toEqual([])
   })
 })
 
