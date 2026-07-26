@@ -175,11 +175,13 @@ describe('mis-built offers are refused', () => {
     )
   })
 
-  it('a satpoint passed as the lot location is refused, not silently truncated', async () => {
+  // A satpoint lot location is spec-legal and now supported end to end; see satpoint.test.ts.
+  it('a satpoint that contradicts the passed satOffset is refused, not silently resolved', async () => {
     await expectCode(
       makeOffer(
         offerParams({
           lot: { outpoint: `${LOT_OUTPOINT}:5000`, valueSats: LOT_VALUE_SATS, script: SELLER.script },
+          satOffset: 4_000,
         }),
       ),
       ImplementationErrorCode.E_MALFORMED_LOCATION,

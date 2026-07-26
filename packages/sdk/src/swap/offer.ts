@@ -34,11 +34,17 @@ export interface SwapUtxo {
 
 export interface MakeOfferParams {
   readonly assetClass: AssetClass
-  /** The lot UTXO: its outpoint is the listing location, its value is the postage it carries. */
+  /**
+   * The lot UTXO. Its outpoint is the listing location and may be a `txid:vout:offset` satpoint
+   * (SPEC §3), in which case the offset supplies `satOffset`. Its value is the postage it carries.
+   */
   readonly lot: SwapUtxo
   readonly priceSats: number
-  /** I-5. Offset of the inscribed sat inside the lot; routes the asset to offset 0 of output 1. */
-  readonly satOffset: number
+  /**
+   * I-5. Offset of the inscribed sat inside the lot; routes the asset to offset 0 of output 1.
+   * Optional only when the lot outpoint is a satpoint that already carries it.
+   */
+  readonly satOffset?: number
   readonly maker: Maker
   readonly attribution: AttributedContents
   readonly expiresAt: string
@@ -91,27 +97,21 @@ export async function makeOffer(params: MakeOfferParams): Promise<OfferDraft> {
     )
   }
 
-  if (parseLocation(params.lot.outpoint).offset !== undefined) {
-    throw new RuneBoltError(
-      ImplementationErrorCode.E_MALFORMED_LOCATION,
-      'the lot location is an outpoint (txid:vout); pass the sat offset as satOffset',
-      { outpoint: params.lot.outpoint },
-    )
-  }
+  const satOffset = resolveLotSatOffset(params.lot.outpoint, params.satOffset)
   const dummyValue = params.dummyValueSats ?? DUMMY_UTXO_VALUE
   const paymentValueSats = params.priceSats + params.lot.valueSats
 
-  if (params.satOffset >= params.lot.valueSats) {
+  if (satOffset >= params.lot.valueSats) {
     throw new RuneBoltError(
       ImplementationErrorCode.E_MALFORMED_PSBT,
       'satOffset lies outside the lot',
-      { satOffset: params.satOffset, lotValueSats: params.lot.valueSats },
+      { satOffset, lotValueSats: params.lot.valueSats },
     )
   }
 
   const placeholder = { script: Buffer.from(placeholderScript()), address: placeholderAddress(network) }
 
-  const recombine = dummyValue * 2 + params.satOffset
+  const recombine = dummyValue * 2 + satOffset
   const outputs = [
     { script: placeholder.script, value: recombine },
     { script: placeholder.script, value: params.lot.valueSats },
@@ -154,7 +154,7 @@ export async function makeOffer(params: MakeOfferParams): Promise<OfferDraft> {
     psbt: base64,
     envelope,
     txid: parsePsbtView(base64, network).unsignedTxid,
-    satOffset: params.satOffset,
+    satOffset,
     sellerInputIndex: SELLER_SIGNATURE_INDEX,
     sellerPaymentIndex: SELLER_SIGNATURE_INDEX,
     paymentValueSats,
@@ -168,7 +168,7 @@ export async function makeOffer(params: MakeOfferParams): Promise<OfferDraft> {
     role: 'seller',
     stage: 'draft',
     signer: { addresses: [params.maker.address, params.maker.receiveAddress] },
-    satOffset: params.satOffset,
+    satOffset,
     network,
     ...(params.now === undefined ? {} : { now: params.now }),
   })
@@ -286,6 +286,33 @@ function buildEnvelope(params: MakeOfferParams, psbt: string): ListingEnvelope {
   // Round-tripping validates every field the wire format requires, including the bitmap scope
   // disclosure, rather than trusting the caller's object shape.
   return decodeListingEnvelope(encodeListingEnvelope(candidate))
+}
+
+/**
+ * I-5. A lot location may be a `txid:vout:offset` satpoint, in which case it already states where
+ * the inscribed sat sits. An explicit `satOffset` wins, but two sources that disagree route the sat
+ * to two different outputs, so a disagreement is refused rather than resolved by precedence.
+ */
+export function resolveLotSatOffset(location: string, satOffset: number | undefined): number {
+  const fromLocation = parseLocation(location).offset
+  if (satOffset === undefined) {
+    if (fromLocation === undefined) {
+      throw new RuneBoltError(
+        ImplementationErrorCode.E_MALFORMED_LOCATION,
+        'the sat offset is unknown: pass satOffset, or a txid:vout:offset lot location',
+        { location },
+      )
+    }
+    return fromLocation
+  }
+  if (fromLocation !== undefined && fromLocation !== satOffset) {
+    throw new RuneBoltError(
+      ImplementationErrorCode.E_MALFORMED_LOCATION,
+      `satOffset ${satOffset} disagrees with the offset ${fromLocation} in the lot location`,
+      { location, satOffset, locationOffset: fromLocation },
+    )
+  }
+  return satOffset
 }
 
 export function addInput(psbt: Psbt, utxo: SwapUtxo): void {

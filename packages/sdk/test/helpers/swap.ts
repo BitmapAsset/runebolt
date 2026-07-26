@@ -156,6 +156,8 @@ export interface EnvelopeOptions {
   readonly contents: UtxoContents
   readonly expiresAt?: string
   readonly disclosure?: ListingEnvelope['disclosure']
+  /** Overrides the lot location, for satpoint (`txid:vout:offset`) and wrong-outpoint fixtures. */
+  readonly lotLocation?: string
 }
 
 export function envelope(options: EnvelopeOptions): ListingEnvelope {
@@ -164,7 +166,7 @@ export function envelope(options: EnvelopeOptions): ListingEnvelope {
     assetClass: options.assetClass,
     sighashMode: 'SINGLE_ACAP',
     lot: {
-      location: `${options.lotInput.txid}:${options.lotInput.vout}`,
+      location: options.lotLocation ?? `${options.lotInput.txid}:${options.lotInput.vout}`,
       priceSats: options.priceSats,
     },
     psbt: options.psbt,

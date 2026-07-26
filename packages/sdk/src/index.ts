@@ -88,6 +88,7 @@ export {
   addressToScript,
   makeCancelSpend,
   makeOffer,
+  resolveLotSatOffset,
   sealOffer,
   type CancelSpend,
   type CancelSpendParams,

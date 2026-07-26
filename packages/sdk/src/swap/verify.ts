@@ -3,7 +3,7 @@ import { ProtocolErrorCode, RuneBoltError, type RuneBoltErrorCode } from '../err
 import type { IndexerAdapter } from '../indexer/adapter.js'
 import { contentsEqual, isMixedUtxo, type UtxoContents } from '../types/attribution.js'
 import { isExpired, type ListingEnvelope } from '../types/envelope.js'
-import { formatLocation, parseLocation } from '../types/location.js'
+import { parseLocation, sameOutpoint } from '../types/location.js'
 import {
   DUMMY_UTXO_MAX_VALUE,
   DUMMY_UTXO_MIN_VALUE,
@@ -114,9 +114,14 @@ export async function verifyOffer(params: VerifyOfferParams): Promise<VerifyVerd
   }
 
   const lot = parseLocation(envelope.lot.location)
+  // A lot location is `txid:vout[:offset]` (SPEC §3). The offset names a sat *inside* the output
+  // and is not part of the outpoint a PSBT input spends, so identity is outpoint equality.
+  // String-comparing the formatted location instead makes every spec-legal satpoint listing look
+  // like an asset mismatch.
+  const isLot = (outpoint: string): boolean => sameOutpoint(parseLocation(outpoint), lot)
   const owns = ownership(signer)
   const ownedInputs = view.inputs.filter((input) => owns(input.address, input.outpoint))
-  const lotInput = view.inputs.find((input) => input.outpoint === formatLocation(lot))
+  const lotInput = view.inputs.find((input) => isLot(input.outpoint))
 
   if (lotInput === undefined) {
     add(ProtocolErrorCode.E_ASSET_MISMATCH, 'no PSBT input spends the listed lot', {
@@ -152,7 +157,7 @@ export async function verifyOffer(params: VerifyOfferParams): Promise<VerifyVerd
 
   // I-9. `outgoing` in ord is the set of asset-bearing inputs the signer controls: a buyer
   // legitimately owns several plain funding inputs, but neither party may put two assets in flight.
-  const ownedAssetInputs = ownedInputs.filter((input) => input.outpoint === formatLocation(lot))
+  const ownedAssetInputs = ownedInputs.filter((input) => isLot(input.outpoint))
   const expectedOwnedAssetInputs = role === 'seller' ? 1 : 0
   if (ownedAssetInputs.length !== expectedOwnedAssetInputs) {
     add(
@@ -429,6 +434,18 @@ async function checkSatOffset(
   const assetOutput = view.outputs[1]
   if (assetOutput === undefined || assetOutput.isOpReturn) {
     add(ProtocolErrorCode.E_SAT_OFFSET, 'output 1 must carry the asset to the buyer', { index: 1 })
+    return
+  }
+
+  // Two sources that disagree route the inscribed sat to two different places, and preferring
+  // either one silently picks a winner. Refuse instead.
+  const fromLot = parseLocation(envelope.lot.location).offset
+  if (params.satOffset !== undefined && fromLot !== undefined && fromLot !== params.satOffset) {
+    add(
+      ProtocolErrorCode.E_SAT_OFFSET,
+      `satOffset ${params.satOffset} disagrees with the offset ${fromLot} in the lot location`,
+      { satOffset: params.satOffset, locationOffset: fromLot, lot: envelope.lot.location },
+    )
     return
   }
 

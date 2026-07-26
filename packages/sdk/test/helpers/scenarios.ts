@@ -49,6 +49,7 @@ export interface TwoDummyOverrides {
   readonly assetClass?: ListingEnvelope['assetClass']
   readonly expiresAt?: string
   readonly disclosure?: ListingEnvelope['disclosure']
+  readonly lotLocation?: string
 }
 
 export function twoDummyInputs(): FixtureInput[] {
@@ -105,6 +106,7 @@ export function twoDummyScenario(overrides: TwoDummyOverrides = {}): Scenario {
       contents: overrides.contents ?? inscriptionContents(),
       ...(overrides.expiresAt === undefined ? {} : { expiresAt: overrides.expiresAt }),
       ...(overrides.disclosure === undefined ? {} : { disclosure: overrides.disclosure }),
+      ...(overrides.lotLocation === undefined ? {} : { lotLocation: overrides.lotLocation }),
     }),
   }
 }

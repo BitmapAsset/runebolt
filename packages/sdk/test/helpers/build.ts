@@ -65,6 +65,35 @@ export async function sealedOffer(
   return { draft, envelope }
 }
 
+export const LOT_SATPOINT = `${LOT_OUTPOINT}:${SAT_OFFSET_SATS}`
+
+/**
+ * The same lot listed by satpoint (SPEC §3): the location carries the offset and no separate
+ * `satOffset` is passed anywhere, so every consumer has to read it off the location.
+ */
+export function satpointOfferParams(): MakeOfferParams {
+  const params = offerParams()
+  return {
+    assetClass: params.assetClass,
+    lot: { outpoint: LOT_SATPOINT, valueSats: LOT_VALUE_SATS, script: SELLER.script },
+    priceSats: params.priceSats,
+    maker: params.maker,
+    attribution: params.attribution,
+    expiresAt: params.expiresAt,
+    network: NETWORK,
+    now: NOW,
+  }
+}
+
+export async function sealedSatpointOffer(): Promise<{
+  draft: OfferDraft
+  envelope: ListingEnvelope
+}> {
+  const draft = await makeOffer(satpointOfferParams())
+  const envelope = await sealOffer({ draft, signedPsbt: sellerSign(draft), now: NOW })
+  return { draft, envelope }
+}
+
 export function buyerWallet(overrides: { dummies?: SwapUtxo[]; funding?: SwapUtxo[] } = {}) {
   return {
     dummies: overrides.dummies ?? [utxo('b1', 600, BUYER), utxo('b2', 600, BUYER)],

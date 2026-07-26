@@ -12,7 +12,14 @@ import {
   SELLER_SIGNATURE_INDEX,
 } from './constants.js'
 import { resolveFee, type FeeChoice } from './fee.js'
-import { addInput, addressToScript, toScript, type Network, type SwapUtxo } from './offer.js'
+import {
+  addInput,
+  addressToScript,
+  resolveLotSatOffset,
+  toScript,
+  type Network,
+  type SwapUtxo,
+} from './offer.js'
 import { parsePsbtView } from './psbt.js'
 import { assertOffer, type SignerView, type VerifyVerdict } from './verify.js'
 
@@ -32,7 +39,8 @@ export interface CompleteSwapParams {
   readonly fee: FeeChoice
   /** SPEC §6.1: optional, and it lands at index 3 so the canonical indexes 0–2 are untouched. */
   readonly platformFee?: { readonly address: string; readonly valueSats: number }
-  readonly satOffset: number
+  /** I-5. Optional only when the envelope's lot location is a satpoint that carries it. */
+  readonly satOffset?: number
   readonly network?: Network
   readonly indexer?: IndexerAdapter
   readonly now?: Date
@@ -73,6 +81,8 @@ export async function completeSwap(params: CompleteSwapParams): Promise<Complete
     )
   }
 
+  const satOffset = resolveLotSatOffset(envelope.lot.location, params.satOffset)
+
   // The offer as received, judged from the maker's side: every index, value and asset-set rule
   // holds regardless of who is reading, and the seller's signature state is checked here.
   await assertOffer({
@@ -80,7 +90,7 @@ export async function completeSwap(params: CompleteSwapParams): Promise<Complete
     role: 'seller',
     stage: 'offer',
     signer: { addresses: [envelope.maker.address, envelope.maker.receiveAddress] },
-    satOffset: params.satOffset,
+    satOffset,
     network,
     ...(params.now === undefined ? {} : { now: params.now }),
   })
@@ -108,9 +118,9 @@ export async function completeSwap(params: CompleteSwapParams): Promise<Complete
   const [dummy0, dummy1] = dummies as [SwapUtxo, SwapUtxo]
 
   const lotValueSats = valueOf(sellerInput, envelope)
-  if (params.satOffset >= lotValueSats) {
+  if (satOffset >= lotValueSats) {
     throw new RuneBoltError(ProtocolErrorCode.E_SAT_OFFSET, 'satOffset lies outside the lot', {
-      satOffset: params.satOffset,
+      satOffset,
       lotValueSats,
     })
   }
@@ -126,7 +136,7 @@ export async function completeSwap(params: CompleteSwapParams): Promise<Complete
 
   const fixed = [
     // I-5: both dummies plus the sat offset, which lands the inscribed sat at offset 0 of output 1.
-    { script: receiveScript, value: dummy0.valueSats + dummy1.valueSats + params.satOffset },
+    { script: receiveScript, value: dummy0.valueSats + dummy1.valueSats + satOffset },
     { script: receiveScript, value: lotValueSats },
     { script: Buffer.from(sellerPayment.script), value: sellerPayment.value },
     ...(params.platformFee === undefined
@@ -202,7 +212,7 @@ export async function completeSwap(params: CompleteSwapParams): Promise<Complete
     role: 'buyer',
     stage: 'offer',
     signer: buyerView,
-    satOffset: params.satOffset,
+    satOffset,
     network,
     ...(params.indexer === undefined ? {} : { indexer: params.indexer }),
     ...(params.now === undefined ? {} : { now: params.now }),
@@ -235,7 +245,8 @@ export interface FinalizeSwapParams {
   /** The completed swap with every buyer input signed. */
   readonly psbt: string
   readonly buyer: SignerView
-  readonly satOffset: number
+  /** I-5. Optional only when the envelope's lot location is a satpoint that carries it. */
+  readonly satOffset?: number
   readonly network?: Network
   readonly now?: Date
 }
@@ -260,7 +271,7 @@ export async function finalizeSwap(params: FinalizeSwapParams): Promise<FinalSwa
     role: 'buyer',
     stage: 'final',
     signer: params.buyer,
-    satOffset: params.satOffset,
+    satOffset: resolveLotSatOffset(params.envelope.lot.location, params.satOffset),
     network,
     ...(params.now === undefined ? {} : { now: params.now }),
   })
@@ -300,7 +311,12 @@ function lotUtxo(input: PsbtInputData, lot: Location, valueSats: number): SwapUt
       'the seller input carries no witnessUtxo',
     )
   }
-  return { outpoint: formatLocation(lot), valueSats, script: Uint8Array.from(script) }
+  // The bare outpoint: a satpoint's offset names a sat inside the output, not the input spent.
+  return {
+    outpoint: formatLocation({ txid: lot.txid, vout: lot.vout }),
+    valueSats,
+    script: Uint8Array.from(script),
+  }
 }
 
 function valueOf(input: PsbtInputData, envelope: ListingEnvelope): number {

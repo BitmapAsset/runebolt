@@ -15,6 +15,7 @@ import {
   sealedOffer,
   utxo,
 } from './helpers/build.js'
+import { buyerSign } from './helpers/sign.js'
 import { BUYER, NETWORK, NOW, SELLER_PAYOUT, THIRD_PARTY } from './helpers/swap.js'
 
 /**
@@ -27,16 +28,6 @@ const base = { network: NETWORK, now: NOW } as const
 
 function validator(pubkey: Buffer, msghash: Buffer, signature: Buffer): boolean {
   return ecc.verify(msghash, pubkey, signature)
-}
-
-/** What the buyer's wallet does: sign every input that is not the seller's. */
-function buyerSign(psbtBase64: string): string {
-  const psbt = Psbt.fromBase64(psbtBase64, { network: NETWORK })
-  for (const index of psbt.txInputs.keys()) {
-    if (index === SELLER_SIGNATURE_INDEX) continue
-    psbt.signInput(index, BUYER.keyPair)
-  }
-  return psbt.toBase64()
 }
 
 async function completed(overrides: Partial<BuyerWallet> = {}) {
