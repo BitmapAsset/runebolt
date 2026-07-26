@@ -1,7 +1,7 @@
-# ===================================
-# SECURITY-FIRST .gitignore
-# RuneBolt — Public Repository
-# ===================================
+# ============================================
+# RuneBolt — public repository
+# Security first: deny secrets and agent state.
+# ============================================
 
 # === SECRETS & CREDENTIALS ===
 .env
@@ -9,14 +9,56 @@
 !.env.example
 !.env.production.example
 !.env.production.template
+.secrets/
+secrets/
 *.pem
 *.key
 *.cert
+*.crt
 *.p12
 *.pfx
+*.keystore
+*.macaroon
+*.token
 id_rsa*
 id_ed25519*
-*.macaroon
+auth.json
+credentials.json
+cookies.txt
+
+# === AGENT / WORKSPACE STATE (never publish) ===
+.openclaw/
+.ouroboros/
+.claude/
+.hermes/
+AGENTS.md
+BOOTSTRAP.md
+MEMORY.md
+SOUL.md
+USER.md
+IDENTITY.md
+HEARTBEAT.md
+TOOLS.md
+memory/
+identity/
+diary/
+audits/
+state/
+soul-backup/
+backups/
+transcripts/
+*.transcript
+msg*.json
+msg*.srt
+msg*.tsv
+msg*.vtt
+
+# === WALLET / BITCOIN LOCAL STATE ===
+wallet.dat
+*.wallet
+regtest/
+signet-data/
+.bitcoin/
 
 # === DATABASES ===
 *.db
@@ -24,44 +66,41 @@ id_ed25519*
 *.sqlite3
 *.sql.bak
 
-# === OPENCLAW / AGENT FILES ===
-.openclaw/
-MEMORY.md
-SOUL.md
-USER.md
-IDENTITY.md
-HEARTBEAT.md
-TOOLS.md
-AGENTS.md
-BOOTSTRAP.md
-memory/
-soul-backup/
-backups/
-
-# === WORKSPACE ARTIFACTS ===
-tmp/
-
 # === NODE / BUILD ===
 node_modules/
 dist/
-.next/
+build/
 out/
+.next/
 coverage/
 *.tsbuildinfo
+.pnp.*
+.yarn/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# === BUILD CACHES ===
+# === CACHES ===
 .turbo/
 .cache/
+.parcel-cache/
+.eslintcache
 *.sst
 
-# === VERCEL ===
+# === DEPLOY ===
 .vercel/
+.fly/
 
-# === LOGS ===
+# === LOGS & TMP ===
 *.log
 logs/
-npm-debug.log*
+tmp/
+temp/
 
-# === OS ===
+# === OS / EDITOR ===
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
