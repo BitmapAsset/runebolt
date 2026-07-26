@@ -1,0 +1,24 @@
+{
+  "name": "runebolt",
+  "private": true,
+  "version": "0.0.0",
+  "description": "RuneBolt — trustless Bitcoin-native asset trading over pre-signed PSBTs",
+  "license": "MIT",
+  "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --no-bail typecheck",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint:boundaries": "node tools/check-boundaries.mjs",
+    "verify": "pnpm run lint:boundaries && pnpm run typecheck && pnpm run test"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}
