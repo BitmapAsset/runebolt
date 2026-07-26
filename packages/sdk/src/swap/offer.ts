@@ -1,5 +1,5 @@
-import { address as addressModule, networks, Psbt } from 'bitcoinjs-lib'
-import { ImplementationErrorCode, RuneBoltError } from '../errors.js'
+import { networks, Psbt } from 'bitcoinjs-lib'
+import { ImplementationErrorCode, ProtocolErrorCode, RuneBoltError } from '../errors.js'
 import type { AttributedContents } from '../types/attribution.js'
 import {
   decodeListingEnvelope,
@@ -8,7 +8,6 @@ import {
   type ListingEnvelope,
   type Maker,
 } from '../types/envelope.js'
-import { parseLocation } from '../types/location.js'
 import type { AssetClass } from '../types/lot.js'
 import {
   DUMMY_UTXO_VALUE,
@@ -19,18 +18,16 @@ import {
 import { resolveFee, type FeeChoice } from './fee.js'
 import { placeholderAddress, placeholderOutpoint, placeholderScript } from './placeholder.js'
 import { parsePsbtView } from './psbt.js'
+import { makeRuneOffer } from './rune.js'
+import {
+  addInput,
+  addressToScript,
+  resolveLotSatOffset,
+  toScript,
+  type Network,
+  type SwapUtxo,
+} from './tx.js'
 import { assertOffer } from './verify.js'
-
-export type Network = networks.Network
-
-export interface SwapUtxo {
-  /** `txid:vout`. */
-  readonly outpoint: string
-  readonly valueSats: number
-  /** scriptPubKey, hex or raw bytes. */
-  readonly script: string | Uint8Array
-  readonly sequence?: number
-}
 
 export interface MakeOfferParams {
   readonly assetClass: AssetClass
@@ -51,6 +48,10 @@ export interface MakeOfferParams {
   readonly disclosure?: BitmapDisclosure
   readonly network?: Network
   readonly dummyValueSats?: number
+  /** Rune listings only (SPEC §6.2): the exact balance the lot must hold. */
+  readonly sellAmount?: string
+  /** Rune listings only: sats carried by the buyer's rune-receive output. */
+  readonly receiveValueSats?: number
   readonly now?: Date
 }
 
@@ -60,7 +61,8 @@ export interface OfferDraft {
   /** Carries the unsigned PSBT until `sealOffer()` swaps in the signed one. */
   readonly envelope: ListingEnvelope
   readonly txid: string
-  readonly satOffset: number
+  /** The 2-dummy layout only. Runes have no sat-offset contract (SPEC §6.2). */
+  readonly satOffset?: number
   readonly sellerInputIndex: number
   readonly sellerPaymentIndex: number
   readonly paymentValueSats: number
@@ -89,10 +91,11 @@ const PLACEHOLDER_CHANGE_SATS = 10_000
  */
 export async function makeOffer(params: MakeOfferParams): Promise<OfferDraft> {
   const network = params.network ?? networks.bitcoin
+  if (params.assetClass === 'rune') return runeDraft(params, network)
   if (!TWO_DUMMY_CLASSES.has(params.assetClass)) {
     throw new RuneBoltError(
       ImplementationErrorCode.E_UNSUPPORTED_ASSET_CLASS,
-      `makeOffer builds the 2-dummy layout (SPEC §6.1); ${params.assetClass} uses the runestone-free layout (SPEC §6.2), which lands in W7`,
+      `makeOffer builds the 2-dummy layout (SPEC §6.1); ${params.assetClass} has no builder`,
       { assetClass: params.assetClass },
     )
   }
@@ -208,7 +211,7 @@ export async function sealOffer(params: SealOfferParams): Promise<ListingEnvelop
     role: 'seller',
     stage: 'offer',
     signer: { addresses: [envelope.maker.address, envelope.maker.receiveAddress] },
-    satOffset: draft.satOffset,
+    ...(draft.satOffset === undefined ? {} : { satOffset: draft.satOffset }),
     network: draft.network,
     ...(params.now === undefined ? {} : { now: params.now }),
   })
@@ -289,54 +292,40 @@ function buildEnvelope(params: MakeOfferParams, psbt: string): ListingEnvelope {
 }
 
 /**
- * I-5. A lot location may be a `txid:vout:offset` satpoint, in which case it already states where
- * the inscribed sat sits. An explicit `satOffset` wins, but two sources that disagree route the sat
- * to two different outputs, so a disagreement is refused rather than resolved by precedence.
+ * SPEC §6.2. Runes get their own arrangement, not a variation on the 2-dummy one: no dummies, no
+ * sat offset, and a balance the lot must match exactly. `makeRuneOffer()` is the direct entry
+ * point; this adapts the shared `makeOffer()` surface onto it.
  */
-export function resolveLotSatOffset(location: string, satOffset: number | undefined): number {
-  const fromLocation = parseLocation(location).offset
-  if (satOffset === undefined) {
-    if (fromLocation === undefined) {
-      throw new RuneBoltError(
-        ImplementationErrorCode.E_MALFORMED_LOCATION,
-        'the sat offset is unknown: pass satOffset, or a txid:vout:offset lot location',
-        { location },
-      )
-    }
-    return fromLocation
-  }
-  if (fromLocation !== undefined && fromLocation !== satOffset) {
+async function runeDraft(params: MakeOfferParams, network: Network): Promise<OfferDraft> {
+  if (params.sellAmount === undefined) {
     throw new RuneBoltError(
-      ImplementationErrorCode.E_MALFORMED_LOCATION,
-      `satOffset ${satOffset} disagrees with the offset ${fromLocation} in the lot location`,
-      { location, satOffset, locationOffset: fromLocation },
+      ProtocolErrorCode.E_ASSET_MISMATCH,
+      'a rune listing must state sellAmount, so the lot can be checked against it (SPEC §6.2.2)',
+      { lot: params.lot.outpoint },
     )
   }
-  return satOffset
-}
-
-export function addInput(psbt: Psbt, utxo: SwapUtxo): void {
-  const { txid, vout } = parseLocation(utxo.outpoint)
-  psbt.addInput({
-    hash: txid,
-    index: vout,
-    witnessUtxo: { script: Buffer.from(toScript(utxo.script)), value: utxo.valueSats },
-    ...(utxo.sequence === undefined ? {} : { sequence: utxo.sequence }),
+  const draft = await makeRuneOffer({
+    lot: params.lot,
+    priceSats: params.priceSats,
+    sellAmount: params.sellAmount,
+    maker: params.maker,
+    attribution: params.attribution,
+    expiresAt: params.expiresAt,
+    network,
+    ...(params.receiveValueSats === undefined
+      ? {}
+      : { receiveValueSats: params.receiveValueSats }),
+    ...(params.now === undefined ? {} : { now: params.now }),
   })
-}
-
-export function toScript(script: string | Uint8Array): Buffer {
-  return typeof script === 'string' ? Buffer.from(script, 'hex') : Buffer.from(script)
-}
-
-export function addressToScript(address: string, network: Network): Uint8Array {
-  try {
-    return Uint8Array.from(addressModule.toOutputScript(address, network))
-  } catch (error) {
-    throw new RuneBoltError(
-      ImplementationErrorCode.E_MALFORMED_PSBT,
-      `address ${address} is not valid on this network`,
-      { address, cause: String(error) },
-    )
+  return {
+    psbt: draft.psbt,
+    envelope: draft.envelope,
+    txid: draft.txid,
+    sellerInputIndex: draft.sellerInputIndex,
+    sellerPaymentIndex: draft.sellerPaymentIndex,
+    paymentValueSats: draft.paymentValueSats,
+    placeholderInputs: draft.placeholderInputs,
+    placeholderOutputs: draft.placeholderOutputs,
+    network: draft.network,
   }
 }

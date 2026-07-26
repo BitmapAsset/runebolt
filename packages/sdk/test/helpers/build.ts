@@ -1,5 +1,6 @@
 import { Psbt } from 'bitcoinjs-lib'
-import { makeOffer, sealOffer, type MakeOfferParams, type OfferDraft, type SwapUtxo } from '../../src/swap/offer.js'
+import { makeOffer, sealOffer, type MakeOfferParams, type OfferDraft } from '../../src/swap/offer.js'
+import type { SwapUtxo } from '../../src/swap/tx.js'
 import { SIGHASH_SINGLE_ANYONECANPAY } from '../../src/swap/constants.js'
 import type { ListingEnvelope } from '../../src/types/envelope.js'
 import {

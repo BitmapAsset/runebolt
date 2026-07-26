@@ -193,7 +193,9 @@ describe('completeSwap refuses what it cannot build safely', () => {
     ).rejects.toMatchObject({ code: ProtocolErrorCode.E_EXPIRED })
   })
 
-  it('rejects a rune offer rather than building the wrong layout', async () => {
+  // Runes route to the runestone-free builder (SPEC §6.2) rather than being refused outright, so
+  // an inscription lot relabelled as a rune is now caught on its contents instead of its label.
+  it('rejects an inscription lot relabelled as a rune', async () => {
     const { envelope } = await sealedOffer()
     await expect(
       completeSwap({
@@ -203,7 +205,7 @@ describe('completeSwap refuses what it cannot build safely', () => {
         fee: { rateSatPerVb: 5 },
         satOffset: SAT_OFFSET_SATS,
       }),
-    ).rejects.toMatchObject({ code: ImplementationErrorCode.E_UNSUPPORTED_ASSET_CLASS })
+    ).rejects.toMatchObject({ code: ProtocolErrorCode.E_ASSET_MISMATCH })
   })
 })
 

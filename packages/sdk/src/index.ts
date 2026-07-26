@@ -85,19 +85,38 @@ export {
   PLACEHOLDER_LABEL,
 } from './swap/placeholder.js'
 export {
+  addInput,
   addressToScript,
+  resolveLotSatOffset,
+  signatureFields,
+  toScript,
+  type Network,
+  type SwapUtxo,
+} from './swap/tx.js'
+export {
   makeCancelSpend,
   makeOffer,
-  resolveLotSatOffset,
   sealOffer,
   type CancelSpend,
   type CancelSpendParams,
   type MakeOfferParams,
-  type Network,
   type OfferDraft,
   type SealOfferParams,
-  type SwapUtxo,
 } from './swap/offer.js'
+export {
+  completeRuneSwap,
+  makeRuneOffer,
+  planRuneListing,
+  type CompletedRuneSwap,
+  type CompleteRuneSwapParams,
+  type MakeRuneOfferParams,
+  type PlanRuneListingParams,
+  type RuneBuyerWallet,
+  type RuneLotCandidate,
+  type RuneListingAction,
+  type RuneListingPlan,
+  type RuneOfferDraft,
+} from './swap/rune.js'
 export {
   completeSwap,
   finalizeSwap,

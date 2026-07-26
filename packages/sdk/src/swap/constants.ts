@@ -10,6 +10,8 @@ export const ORDINALS_POSTAGE_VALUE = 10000
 /** Rune swap layout (SPEC §6.2): buyer rune-receive at 0, seller input and payment at 1. */
 export const RUNE_BUYER_RECEIVE_INDEX = 0
 export const RUNE_SELLER_INDEX = 1
+/** Sats carried by the buyer's rune-receive output. Runes ride the output, not its value. */
+export const RUNE_RECEIVE_VALUE = 546
 
 /** SIGHASH_SINGLE (3) | SIGHASH_ANYONECANPAY (128). */
 export const SIGHASH_SINGLE_ANYONECANPAY = 0x83

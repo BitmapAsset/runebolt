@@ -12,20 +12,25 @@ import {
   SELLER_SIGNATURE_INDEX,
 } from './constants.js'
 import { resolveFee, type FeeChoice } from './fee.js'
+import { parsePsbtView } from './psbt.js'
+import { completeRuneSwap } from './rune.js'
 import {
   addInput,
   addressToScript,
   resolveLotSatOffset,
+  signatureFields,
   toScript,
   type Network,
   type SwapUtxo,
-} from './offer.js'
-import { parsePsbtView } from './psbt.js'
+} from './tx.js'
 import { assertOffer, type SignerView, type VerifyVerdict } from './verify.js'
 
 export interface BuyerWallet {
-  /** I-7. At least two UTXOs in the 580–1000 sat band; the first two conforming ones are used. */
-  readonly dummies: readonly SwapUtxo[]
+  /**
+   * I-7. At least two UTXOs in the 580–1000 sat band; the first two conforming ones are used.
+   * The 2-dummy layout only — a rune swap carries no dummies (SPEC §6.2).
+   */
+  readonly dummies?: readonly SwapUtxo[]
   /** Spent in full — coin selection belongs to the wallet, not to the protocol builder. */
   readonly funding: readonly SwapUtxo[]
   /** Receives the asset and the two regenerated dummies. */
@@ -73,10 +78,11 @@ export async function completeSwap(params: CompleteSwapParams): Promise<Complete
   const { envelope, buyer } = params
   const network = params.network ?? networks.bitcoin
 
+  if (envelope.assetClass === 'rune') return runeSwap(params, network)
   if (!TWO_DUMMY_CLASSES.has(envelope.assetClass)) {
     throw new RuneBoltError(
       ImplementationErrorCode.E_UNSUPPORTED_ASSET_CLASS,
-      `completeSwap builds the 2-dummy layout (SPEC §6.1); ${envelope.assetClass} uses the runestone-free layout (SPEC §6.2), which lands in W7`,
+      `completeSwap builds the 2-dummy layout (SPEC §6.1); ${envelope.assetClass} has no builder`,
       { assetClass: envelope.assetClass },
     )
   }
@@ -107,12 +113,12 @@ export async function completeSwap(params: CompleteSwapParams): Promise<Complete
     )
   }
 
-  const dummies = buyer.dummies.filter((utxo) => inDummyBand(utxo.valueSats)).slice(0, 2)
+  const dummies = (buyer.dummies ?? []).filter((utxo) => inDummyBand(utxo.valueSats)).slice(0, 2)
   if (dummies.length < 2) {
     throw new RuneBoltError(
       ProtocolErrorCode.E_NO_DUMMY_UTXOS,
       `a purchase needs 2 dummy UTXOs in [${DUMMY_UTXO_MIN_VALUE}, ${DUMMY_UTXO_MAX_VALUE}] sat, found ${dummies.length}`,
-      { dummies: buyer.dummies.map((utxo) => utxo.valueSats) },
+      { dummies: (buyer.dummies ?? []).map((utxo) => utxo.valueSats) },
     )
   }
   const [dummy0, dummy1] = dummies as [SwapUtxo, SwapUtxo]
@@ -271,7 +277,10 @@ export async function finalizeSwap(params: FinalizeSwapParams): Promise<FinalSwa
     role: 'buyer',
     stage: 'final',
     signer: params.buyer,
-    satOffset: resolveLotSatOffset(params.envelope.lot.location, params.satOffset),
+    // Runes have no sat-offset contract (SPEC §6.2); demanding one would refuse every rune swap.
+    ...(params.envelope.assetClass === 'rune'
+      ? {}
+      : { satOffset: resolveLotSatOffset(params.envelope.lot.location, params.satOffset) }),
     network,
     ...(params.now === undefined ? {} : { now: params.now }),
   })
@@ -284,24 +293,6 @@ export async function finalizeSwap(params: FinalizeSwapParams): Promise<FinalSwa
 }
 
 type PsbtInputData = Psbt['data']['inputs'][number]
-
-function signatureFields(input: PsbtInputData): Record<string, unknown> {
-  const fields: Record<string, unknown> = {}
-  if (input.witnessUtxo !== undefined) fields['witnessUtxo'] = input.witnessUtxo
-  if (input.nonWitnessUtxo !== undefined) fields['nonWitnessUtxo'] = input.nonWitnessUtxo
-  if (input.sighashType !== undefined) fields['sighashType'] = input.sighashType
-  if (input.partialSig !== undefined) fields['partialSig'] = input.partialSig
-  if (input.tapKeySig !== undefined) fields['tapKeySig'] = input.tapKeySig
-  if (input.tapScriptSig !== undefined) fields['tapScriptSig'] = input.tapScriptSig
-  if (input.tapLeafScript !== undefined) fields['tapLeafScript'] = input.tapLeafScript
-  if (input.tapInternalKey !== undefined) fields['tapInternalKey'] = input.tapInternalKey
-  if (input.tapMerkleRoot !== undefined) fields['tapMerkleRoot'] = input.tapMerkleRoot
-  if (input.redeemScript !== undefined) fields['redeemScript'] = input.redeemScript
-  if (input.witnessScript !== undefined) fields['witnessScript'] = input.witnessScript
-  if (input.finalScriptSig !== undefined) fields['finalScriptSig'] = input.finalScriptSig
-  if (input.finalScriptWitness !== undefined) fields['finalScriptWitness'] = input.finalScriptWitness
-  return fields
-}
 
 function lotUtxo(input: PsbtInputData, lot: Location, valueSats: number): SwapUtxo {
   const script = input.witnessUtxo?.script
@@ -333,4 +324,24 @@ function valueOf(input: PsbtInputData, envelope: ListingEnvelope): number {
 
 function inDummyBand(valueSats: number): boolean {
   return valueSats >= DUMMY_UTXO_MIN_VALUE && valueSats <= DUMMY_UTXO_MAX_VALUE
+}
+
+/** SPEC §6.2. Runes have their own arrangement; `completeRuneSwap()` is the direct entry point. */
+async function runeSwap(params: CompleteSwapParams, network: Network): Promise<CompletedSwap> {
+  const swap = await completeRuneSwap({
+    envelope: params.envelope,
+    buyer: {
+      funding: params.buyer.funding,
+      receiveAddress: params.buyer.receiveAddress,
+      ...(params.buyer.changeAddress === undefined
+        ? {}
+        : { changeAddress: params.buyer.changeAddress }),
+    },
+    fee: params.fee,
+    network,
+    ...(params.platformFee === undefined ? {} : { platformFee: params.platformFee }),
+    ...(params.indexer === undefined ? {} : { indexer: params.indexer }),
+    ...(params.now === undefined ? {} : { now: params.now }),
+  })
+  return swap
 }

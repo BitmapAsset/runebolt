@@ -161,10 +161,18 @@ describe('mis-built offers are refused', () => {
     await expect(promise).rejects.toMatchObject({ code })
   }
 
-  it('a rune lot is refused rather than built in the wrong layout', async () => {
+  // Runes route to the runestone-free builder (SPEC §6.2); see rune.test.ts. What is refused here
+  // is a rune listing that never says how much is being sold, which is the one thing that makes
+  // the lot checkable against the sale (SPEC §6.2.2).
+  it('a rune listing with no sellAmount is refused', async () => {
     await expectCode(
-      makeOffer(offerParams({ assetClass: 'rune', attribution: { ...offerParams().attribution, contents: runeContents() } })),
-      ImplementationErrorCode.E_UNSUPPORTED_ASSET_CLASS,
+      makeOffer(
+        offerParams({
+          assetClass: 'rune',
+          attribution: { ...offerParams().attribution, contents: runeContents() },
+        }),
+      ),
+      ProtocolErrorCode.E_ASSET_MISMATCH,
     )
   })
 
