@@ -146,6 +146,11 @@ function isSigned(data: Psbt['data']['inputs'][number]): boolean {
  * The sighash byte carried by the signature itself, which is what a verifier must judge — an
  * unsigned `sighashType` hint is only a request. ECDSA appends the byte to the DER signature;
  * Schnorr appends it only when it is not SIGHASH_DEFAULT (a bare 64-byte tapKeySig).
+ *
+ * Finalizing an input moves the signature into the witness and drops `partialSig` *and*
+ * `sighashType` (BIP-174 §finalizer). Reading the hint after that returns `undefined` and every
+ * sighash judgement — I-19 and the SIGHASH_NONE lint alike — goes quiet on exactly the PSBTs that
+ * arrive already finalized from a wallet. So the finalized witness is parsed instead.
  */
 function signatureSighashType(data: Psbt['data']['inputs'][number]): number | undefined {
   const partial = data.partialSig?.[0]?.signature
@@ -153,7 +158,91 @@ function signatureSighashType(data: Psbt['data']['inputs'][number]): number | un
   if (data.tapKeySig !== undefined) {
     return data.tapKeySig.length === 65 ? data.tapKeySig[64] : Transaction.SIGHASH_DEFAULT
   }
-  return data.sighashType
+  const tapScript = data.tapScriptSig?.[0]?.signature
+  if (tapScript !== undefined) {
+    return tapScript.length === 65 ? tapScript[64] : Transaction.SIGHASH_DEFAULT
+  }
+  return finalizedSighashType(data) ?? data.sighashType
+}
+
+function finalizedSighashType(data: Psbt['data']['inputs'][number]): number | undefined {
+  const items =
+    data.finalScriptWitness === undefined
+      ? undefined
+      : witnessStack(Uint8Array.from(data.finalScriptWitness))
+  const candidates =
+    items ??
+    (data.finalScriptSig === undefined
+      ? []
+      : scriptPushes(Uint8Array.from(data.finalScriptSig)))
+  for (const item of candidates) {
+    const sighash = sighashOfSignature(item)
+    if (sighash !== undefined) return sighash
+  }
+  return undefined
+}
+
+/** DER first: a DER signature can itself be 64 or 65 bytes long, which Schnorr sizing would eat. */
+function sighashOfSignature(item: Uint8Array): number | undefined {
+  if (item[0] === 0x30 && item.length >= 9 && item.length <= 73) return item[item.length - 1]
+  if (item.length === 64) return Transaction.SIGHASH_DEFAULT
+  if (item.length === 65) return item[64]
+  return undefined
+}
+
+/** `finalScriptWitness` is a serialized stack: compact-size count, then length-prefixed items. */
+function witnessStack(witness: Uint8Array): Uint8Array[] | undefined {
+  const count = compactSize(witness, 0)
+  if (count === undefined) return undefined
+  let offset = count.size
+  const items: Uint8Array[] = []
+  for (let i = 0; i < count.value; i += 1) {
+    const length = compactSize(witness, offset)
+    if (length === undefined) return undefined
+    offset += length.size
+    if (offset + length.value > witness.length) return undefined
+    items.push(witness.subarray(offset, offset + length.value))
+    offset += length.value
+  }
+  return offset === witness.length ? items : undefined
+}
+
+/** A signed legacy or P2SH scriptSig is push-only, so the signature is one of the pushed items. */
+function scriptPushes(script: Uint8Array): Uint8Array[] {
+  const pushes: Uint8Array[] = []
+  let offset = 0
+  while (offset < script.length) {
+    const op = script[offset]
+    if (op === undefined || op > 0x4e) break
+    offset += 1
+    let length = op
+    if (op === 0x4c || op === 0x4d || op === 0x4e) {
+      const width = op === 0x4c ? 1 : op === 0x4d ? 2 : 4
+      if (offset + width > script.length) break
+      length = 0
+      for (let i = 0; i < width; i += 1) length += (script[offset + i] ?? 0) * 256 ** i
+      offset += width
+    }
+    if (offset + length > script.length) break
+    pushes.push(script.subarray(offset, offset + length))
+    offset += length
+  }
+  return pushes
+}
+
+function compactSize(
+  bytes: Uint8Array,
+  offset: number,
+): { value: number; size: number } | undefined {
+  const first = bytes[offset]
+  if (first === undefined) return undefined
+  if (first < 0xfd) return { value: first, size: 1 }
+  const width = first === 0xfd ? 2 : first === 0xfe ? 4 : 0
+  // 0xff would be an eight-byte length: not a witness item that exists.
+  if (width === 0 || offset + 1 + width > bytes.length) return undefined
+  let value = 0
+  for (let i = 0; i < width; i += 1) value += (bytes[offset + 1 + i] ?? 0) * 256 ** i
+  return { value, size: 1 + width }
 }
 
 function scriptToAddress(script: Uint8Array, network: Network): string | undefined {
