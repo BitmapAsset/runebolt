@@ -24,7 +24,7 @@
   "devDependencies": {
     "@bitcoinerlab/secp256k1": "^1.2.0",
     "@types/node": "^22.10.2",
-    "ecpair": "^2.1.0",
+    "ecpair": "^3.0.2",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }
