@@ -1,5 +1,29 @@
 # Legacy — Taproot Assets era (March 2026)
 
+> **The code is no longer checked out on `main`.** `taproot-assets-era/` was removed and
+> preserved in history under the annotated tag **`legacy/taproot-assets-era-final`**
+> (commit `f8eebe3`). Recover it with:
+>
+> ```sh
+> git checkout legacy/taproot-assets-era-final -- legacy/taproot-assets-era
+> ```
+>
+> **Why it was removed:** its three checked-in `package-lock.json` files generated
+> **63 Dependabot alerts** (1 critical, 25 high, 30 moderate, 7 low) against a frozen
+> prototype that is never built, tested or deployed. That noise buried real alerts on the
+> live tree. Deleting the directory retires those alerts at the source instead of
+> dismissing 63 of them one at a time. Nothing on `main` referenced it — verified by
+> `git grep taproot-assets-era` (no hits outside `legacy/`), by `pnpm-workspace.yaml`
+> (`packages/*` only), and by `.github/workflows/ci.yml` (the sole workflow, which runs
+> only workspace scripts).
+>
+> Browse it without checking anything out:
+>
+> ```sh
+> git ls-tree -r --name-only legacy/taproot-assets-era-final legacy/taproot-assets-era
+> git show legacy/taproot-assets-era-final:legacy/taproot-assets-era/README.md
+> ```
+
 Everything under `taproot-assets-era/` is the **first** RuneBolt design. It is kept for history.
 It is not built, tested, deployed, or maintained. Do not import from it.
 
@@ -11,6 +35,7 @@ off-chain against a hub-operated ledger. Backend (Express + SQLite + WebSocket),
 `@runebolt/sdk`, Docker/Vault/Grafana infrastructure, and a large body of UX and security research.
 
 `legacy/ci/ci-cd.yml` is the old GitHub Actions workflow, parked here so it no longer runs.
+It is retained; the code it built now lives only under the tag above.
 
 ## Why it was superseded
 
