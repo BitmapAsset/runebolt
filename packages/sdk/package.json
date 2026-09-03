@@ -19,7 +19,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "bitcoinjs-lib": "^6.1.7"
+    "bitcoinjs-lib": "^7.0.1"
   },
   "devDependencies": {
     "@bitcoinerlab/secp256k1": "^1.2.0",
