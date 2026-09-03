@@ -26,6 +26,6 @@
     "@types/node": "^22.10.2",
     "ecpair": "^2.1.0",
     "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.11"
   }
 }
