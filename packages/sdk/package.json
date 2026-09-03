@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@bitcoinerlab/secp256k1": "^1.2.0",
-    "@types/node": "^22.10.2",
+    "@types/node": "^26.4.0",
     "ecpair": "^2.1.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
