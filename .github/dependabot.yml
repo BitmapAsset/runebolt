@@ -1,0 +1,60 @@
+# Dependabot configuration for RuneBolt.
+#
+# Scope: only the live tree. `legacy/` holds an archived, non-building snapshot of
+# the Taproot-Assets-era code (full history preserved at tag
+# legacy/taproot-assets-era-final) and is deliberately NOT tracked here — chasing
+# lockfiles for deleted code produced failing "Dependabot Updates" runs.
+#
+# Grouping: minor+patch version updates arrive as ONE PR per ecosystem, majors
+# stay separate (they need a human), and security fixes arrive as ONE PR per
+# ecosystem instead of one PR per package.
+version: 2
+
+updates:
+  # pnpm workspace: the root pnpm-lock.yaml covers packages/* as well, so a
+  # single "/" entry is the whole JS dependency surface.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      npm-minor-and-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Los_Angeles"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      actions-minor-and-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"

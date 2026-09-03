@@ -34,8 +34,14 @@ RuneBolt hub, locked $DOG (`DOG•GO•TO•THE•MOON`, rune id `1:0`) on L1, t
 off-chain against a hub-operated ledger. Backend (Express + SQLite + WebSocket), Next.js frontend,
 `@runebolt/sdk`, Docker/Vault/Grafana infrastructure, and a large body of UX and security research.
 
-`legacy/ci/ci-cd.yml` is the old GitHub Actions workflow, parked here so it no longer runs.
-It is retained; the code it built now lives only under the tag above.
+The old GitHub Actions workflow that built it (`legacy/ci/ci-cd.yml`) has now been removed
+from `main` too. Parking it here already stopped it running, but it kept this directory
+looking like a live build surface and it only ever built deleted code. It is preserved
+unchanged under the tag above (blob `4dc9c28`):
+
+```sh
+git show legacy/taproot-assets-era-final:legacy/ci/ci-cd.yml
+```
 
 ## Why it was superseded
 
